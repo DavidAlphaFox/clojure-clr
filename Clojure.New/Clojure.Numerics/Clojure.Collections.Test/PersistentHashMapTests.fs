@@ -905,10 +905,11 @@ let doBigTest(numEntries:int) =
         Expect.isTrue (m.containsKey(key)) "dictionary key should be in map"
         Expect.equal (m.valAt(key)) (upcast key) "Value should be same as key"
 
-    let s = m.seq()
+    let mutable s = m.seq()
     while not (isNull s) do
         let entry = s.first() :?> IMapEntry
         Expect.isTrue (dict.ContainsKey( entry.key() :?> int )) "map key shoudl be in dictionary"
+        s <- s.next()
 
 [<Tests>]
 let bigPersistentHashMapTests =

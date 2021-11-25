@@ -51,6 +51,7 @@ module private SHMNOdeOps =
         else pcequiv(k1,k2)
 
 open SHMNOdeOps
+open System.Reflection
 
 type Box(init) =
     let mutable value : bool = init
@@ -159,7 +160,7 @@ and  SHMNode =
                                 match entries.[j] with 
                                 | KeyValue(Key=k; Value=v) -> SHMNode.EmptyBitmapNode.assoc (shift+5) (getHash k) k v addedLeaf |> Some
                                 | Node(Node=node) -> node |> Some
-                        j <- j+2
+                            j <- j+1
                     ArrayNode(n+1,nodes)
 
                 else
@@ -421,18 +422,18 @@ type SimpleHashMap =
         member this.valAt(k,nf) = 
             match this with
             | Empty -> nf
-            | Rooted(Node=n) -> n.find2 0 (hash(k)) k nf 
+            | Rooted(Node=n) -> n.find2 0 (hash k) k nf 
 
     interface Associative with  
         member this.containsKey(k) =
             match this with
             | Empty -> false
-            | Rooted(Node=n) -> (n.find2 0 (hash(k)) k SimpleHashMap.notFoundValue)  <> (upcast SimpleHashMap.notFoundValue)
+            | Rooted(Node=n) -> (n.find2 0 (hash k) k SimpleHashMap.notFoundValue)  <> (upcast SimpleHashMap.notFoundValue)
         member this.entryAt(k) = 
             match this with
             | Empty -> null
             | Rooted(Node=n) -> 
-                match n.find 0 (hash(k)) k with
+                match n.find 0 (hash k) k with
                 | None -> null
                 | Some me -> me
         member this.assoc(k,v) = upcast (this:>IPersistentMap).assoc(k,v)
@@ -447,6 +448,15 @@ type SimpleHashMap =
             match o with 
             | null -> upcast this
             | :? IMapEntry as e -> (this:>IPersistentMap).assoc(e.key(),e.value())
+            | :? DictionaryEntry as e -> (this:>IPersistentMap).assoc(e.Key,e.Value)
+            | _ when o.GetType().IsGenericType && o.GetType().Name = "KeyValuePair`2" ->
+                let t = o.GetType()
+                let k = t.InvokeMember("Key",BindingFlags.GetProperty,null,o,null)
+                let v = t.InvokeMember("Value",BindingFlags.GetProperty,null,o,null)
+                (this:>IPersistentMap).assoc(k,v)
+            | :? IPersistentVector as v ->
+                if v.count() = 2 then (this:>IPersistentMap).assoc(v.nth(0),v.nth(1))
+                else raise <| ArgumentException("o","Vector arg to map cons must be a pair")
             | _ -> 
                 let rec step (s:ISeq) (m:IPersistentMap) =
                     if isNull s then
@@ -462,7 +472,7 @@ type SimpleHashMap =
                 match this with
                 | Empty -> SHMNode.EmptyBitmapNode
                 | Rooted(Node=n) -> n
-            let newRoot = rootToUse.assoc 0 (hash(k)) k v addedLeaf
+            let newRoot = rootToUse.assoc 0 (hash k) k v addedLeaf
             if newRoot = rootToUse then
                 upcast this
             else
@@ -476,7 +486,7 @@ type SimpleHashMap =
             match this with
             | Empty -> upcast this
             | Rooted(Count=c;Node=n) ->
-                match  n.without 0 (hash(k)) k with
+                match  n.without 0 (hash k) k with
                 | None -> upcast this
                 | Some newRoot -> 
                     if newRoot = n then
