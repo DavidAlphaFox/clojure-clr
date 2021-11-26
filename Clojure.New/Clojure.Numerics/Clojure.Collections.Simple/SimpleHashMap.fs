@@ -13,7 +13,7 @@ module private SHMNodeOps =
         clone
 
     let removeEntry (arr: 'T [], i: int) : 'T [] =
-        let newArr: 'T [] = Array.zeroCreate <| arr.Length - 2
+        let newArr: 'T [] = Array.zeroCreate <| arr.Length - 1
         Array.Copy(arr, 0, newArr, 0, i)
         Array.Copy(arr, (i + 1), newArr, i, newArr.Length - i)
         newArr
@@ -620,7 +620,7 @@ type SimpleHashMap =
             | Empty -> upcast this
             | Rooted (Count = c; Node = n) ->
                 match n.without 0 (hash k) k with
-                | None -> upcast this
+                | None -> Empty
                 | Some newRoot ->
                     if newRoot = n then upcast this
                     elif c = 1 then upcast Empty
