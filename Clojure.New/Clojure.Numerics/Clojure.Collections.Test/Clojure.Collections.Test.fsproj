@@ -19,7 +19,7 @@
 
   <ItemGroup>
     <PackageReference Include="Expecto" Version="9.*" />
-    <PackageReference Include="YoloDev.Expecto.TestSdk" Version="0.12.12" />
+    <PackageReference Include="YoloDev.Expecto.TestSdk" Version="0.12.13" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.1.0-preview-20211109-03" />
     <ProjectReference Include="..\Clojure.Collections.Simple\Clojure.Collections.Simple.fsproj" />
     <ProjectReference Include="..\Clojure.Collections\Clojure.Collections.fsproj" />

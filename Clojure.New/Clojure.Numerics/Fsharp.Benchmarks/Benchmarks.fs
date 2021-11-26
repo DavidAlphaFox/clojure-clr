@@ -1,4 +1,4 @@
-﻿module Fsharp.Benchmarks 
+﻿module Fsharp.Benchmarks
 
 open System
 open BenchmarkDotNet
@@ -19,7 +19,7 @@ open BenchmarkDotNet.Attributes
 //    // [<IterationSetup>]
 //    // member self.IterationSetup() =
 //    //     printfn "%s" "Iteration Setup"
-    
+
 //    // [<IterationCleanup>]
 //    // member self.IterationCleanup() =
 //    //     printfn "%s" "Iteration Cleanup"
@@ -40,45 +40,64 @@ open BenchmarkDotNet.Attributes
 [<AllowNullLiteral>]
 type FakeSeq(n1) =
     let numItems = n1
-    member x.next() = if numItems = 0 then null else FakeSeq(numItems-1)
-    
+
+    member x.next() =
+        if numItems = 0 then
+            null
+        else
+            FakeSeq(numItems - 1)
 
 
-type BoundedLength () = 
 
-    [<Params(10,100,1000)>]
+type BoundedLength() =
+
+    [<Params(10, 100, 1000)>]
     member val public count = 0 with get, set
-    
+
     [<Benchmark>]
-    member x.IterativeBoundReached () =
+    member x.IterativeBoundReached() =
         let mutable i = 0
         let mutable c = FakeSeq(x.count)
-        let limit = x.count-2
+        let limit = x.count - 2
+
         while c <> null && i <= limit do
-            c <- c.next()
-            i <- i+1
+            c <- c.next ()
+            i <- i + 1
+
         i
 
     [<Benchmark>]
-    member x.IterativeBoundNotReached () =
+    member x.IterativeBoundNotReached() =
         let mutable i = 0
         let mutable c = FakeSeq(x.count)
-        let limit = x.count+10
+        let limit = x.count + 10
+
         while c <> null && i <= limit do
-            c <- c.next()
-            i <- i+1
+            c <- c.next ()
+            i <- i + 1
+
         i
 
     [<Benchmark>]
-    member x.RecursiveBoundReached () =
-        let limit = x.count-2
-        let rec step (c:FakeSeq) i = if c <> null && i <= limit then step (c.next()) (i+1) else i
+    member x.RecursiveBoundReached() =
+        let limit = x.count - 2
+
+        let rec step (c: FakeSeq) i =
+            if c <> null && i <= limit then
+                step (c.next ()) (i + 1)
+            else
+                i
+
         step (FakeSeq(x.count)) 0
-    
+
     [<Benchmark>]
-    member x.RecursiveBoundNotReached () =
-        let limit = x.count+10
-        let rec step (c:FakeSeq) i = if c <> null && i <= limit then step (c.next()) (i+1) else i
+    member x.RecursiveBoundNotReached() =
+        let limit = x.count + 10
+
+        let rec step (c: FakeSeq) i =
+            if c <> null && i <= limit then
+                step (c.next ()) (i + 1)
+            else
+                i
+
         step (FakeSeq(x.count)) 0
-
-

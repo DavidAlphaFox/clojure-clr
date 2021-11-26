@@ -16,7 +16,7 @@
   <ItemGroup>
     <PackageReference Include="Expecto" Version="9.*" />
     <PackageReference Include="Expecto.VisualStudio.TestAdapter" Version="10.0.2" />
-    <PackageReference Include="YoloDev.Expecto.TestSdk" Version="0.12.12" />
+    <PackageReference Include="YoloDev.Expecto.TestSdk" Version="0.12.13" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.1.0-preview-20211109-03" />
     <ProjectReference Include="..\Clojure.Numerics\Clojure.Numerics.fsproj" />
 	  <PackageReference Update="FSharp.Core" Version="6.0.1" />

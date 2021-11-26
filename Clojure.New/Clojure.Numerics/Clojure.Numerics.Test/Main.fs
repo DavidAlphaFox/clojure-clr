@@ -1,4 +1,5 @@
 ﻿module Clojure.Numerics.Test
+
 open Expecto
 
 [<EntryPoint>]
