@@ -308,7 +308,7 @@ let basicSimpleHashMapPersistentMapTests =
 
               Expect.isTrue (m1 = m2) "No change"
 
-          ftestCase "wihout on all keys yields empty map"
+          testCase "wihout on all keys yields empty map"
           <| fun _ ->
 
               let d: Dictionary<int, string> = Dictionary()

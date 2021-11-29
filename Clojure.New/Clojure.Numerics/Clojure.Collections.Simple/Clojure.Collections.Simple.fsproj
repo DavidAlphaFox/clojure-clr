@@ -8,6 +8,7 @@
   <ItemGroup>
     <Compile Include="SimplestCollections.fs" />
     <Compile Include="SimpleHashMap.fs" />
+    <Compile Include="SimpleHashMap2.fs" />
   </ItemGroup>
 
   <ItemGroup>

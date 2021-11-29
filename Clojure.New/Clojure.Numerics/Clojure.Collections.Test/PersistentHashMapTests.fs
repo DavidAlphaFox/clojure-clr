@@ -396,6 +396,21 @@ let basicPersistentHashMapPersistentMapTests =
 
               Expect.isTrue (m1 = m2) "No change"
 
+          ftestCase "wihout on all keys yields empty map"
+          <| fun _ ->
+
+              let d: Dictionary<int, string> = Dictionary()
+
+              d.[3] <- "a"
+              d.[5] <- "b"
+              d.[7] <- "c"
+
+              let m1 = PersistentHashMap.create (d)
+              let m2 = m1.without(3).without(5).without (7)
+
+              Expect.equal (m2.count ()) 0 "Should be no entries remaining"
+
+        
           ]
 
 [<Tests>]
