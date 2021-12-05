@@ -68,11 +68,11 @@ type BNode2Entry =
     | Node of Node: SHMNode2
 
 and SHMNode2 =
-    | ArrayNode2 of Count: int * Nodes: (SHMNode2 option) []
-    | BitmapNode2 of Bitmap: int * Entries: BNode2Entry []
-    | CollisionNode2 of Hash: int * Count: int * KVs: MapEntry []
+    | ArrayNode2 of Count:  int ref * Nodes: (SHMNode2 option) []
+    | BitmapNode2 of Bitmap: int ref * Entries: BNode2Entry []
+    | CollisionNode2 of Hash: int * Count: int ref * KVs: MapEntry []
 
-    static member EmptyBitmapNode = BitmapNode2(0, Array.empty<BNode2Entry>)
+    static member EmptyBitmapNode = BitmapNode2(ref 0, Array.empty<BNode2Entry>)
 
     static member tryFindCNodeIndex(key: obj, kvs: MapEntry []) =
         kvs
@@ -84,7 +84,7 @@ and SHMNode2 =
         if key1hash = key2hash then
             CollisionNode2(
                 key1hash,
-                2,
+                ref 2,
                 [| MapEntry(key1, val1)
                    MapEntry(key2, val2) |]
             )
@@ -111,7 +111,7 @@ and SHMNode2 =
             | None -> None
             | Some node -> node.find (shift + 5) hash key
         | BitmapNode2 (Bitmap = bitmap; Entries = entries) ->
-            match hashToIndex hash shift bitmap with
+            match hashToIndex hash shift bitmap.Value with
             | None -> None
             | Some idx ->
                 match entries.[idx] with
@@ -137,7 +137,7 @@ and SHMNode2 =
             | Some node -> node.find2 (shift + 5) hash key notFound
 
         | BitmapNode2 (Bitmap = bitmap; Entries = entries) ->
-            match hashToIndex hash shift bitmap with
+            match hashToIndex hash shift bitmap.Value with
             | None -> notFound
             | Some idx ->
                 match entries.[idx] with
@@ -159,7 +159,7 @@ and SHMNode2 =
                 let newNode =
                     SHMNode2.EmptyBitmapNode.assoc (shift + 5) hash key value addedLeaf
 
-                ArrayNode2(count + 1, cloneAndSet (nodes, idx, Some newNode))
+                ArrayNode2(ref (count.Value + 1), cloneAndSet (nodes, idx, Some newNode))
             | Some node ->
                 let newNode =
                     node.assoc (shift + 5) hash key value addedLeaf
@@ -167,12 +167,12 @@ and SHMNode2 =
                 if newNode = node then
                     this
                 else
-                    ArrayNode2(count, cloneAndSet (nodes, idx, Some newNode))
+                    ArrayNode2(ref count.Value, cloneAndSet (nodes, idx, Some newNode))
 
         | BitmapNode2 (Bitmap = bitmap; Entries = entries) ->
-            match hashToIndex hash shift bitmap with
+            match hashToIndex hash shift bitmap.Value with
             | None ->
-                let n = bitCount (bitmap)
+                let n = bitCount bitmap.Value
 
                 if n >= 16 then
                     let nodes: SHMNode2 option [] = Array.zeroCreate 32
@@ -185,7 +185,7 @@ and SHMNode2 =
                     let mutable j = 0
 
                     for i = 0 to 31 do
-                        if ((bitmap >>> i) &&& 1) <> 0 then
+                        if ((bitmap.Value >>> i) &&& 1) <> 0 then
                             nodes.[i] <-
                                 match entries.[j] with
                                 | KeyValue (Key = k; Value = v) ->
@@ -195,17 +195,17 @@ and SHMNode2 =
 
                             j <- j + 1
 
-                    ArrayNode2(n + 1, nodes)
+                    ArrayNode2(ref (n + 1), nodes)
 
                 else
                     let bit = bitPos (hash, shift)
-                    let idx = bitIndex (bitmap, bit)
+                    let idx = bitIndex (bitmap.Value, bit)
                     let newArray: BNode2Entry [] = Array.zeroCreate (n + 1)
                     Array.Copy(entries, 0, newArray, 0, idx)
                     newArray.[idx] <- KeyValue(key, value)
                     Array.Copy(entries, idx, newArray, idx + 1, n - idx)
                     addedLeaf.set ()
-                    BitmapNode2((bitmap ||| bit), newArray)
+                    BitmapNode2(ref (bitmap.Value ||| bit), newArray)
 
             | Some idx ->
                 let entry = entries.[idx]
@@ -216,14 +216,14 @@ and SHMNode2 =
                         if value = v then
                             this
                         else
-                            BitmapNode2(bitmap, cloneAndSet (entries, idx, KeyValue(key, value)))
+                            BitmapNode2(ref bitmap.Value, cloneAndSet (entries, idx, KeyValue(key, value)))
                     else
                         addedLeaf.set ()
 
                         let newNode =
                             SHMNode2.createNode (shift + 5) k v hash key value
 
-                        BitmapNode2(bitmap, cloneAndSet (entries, idx, Node(newNode)))
+                        BitmapNode2(ref bitmap.Value, cloneAndSet (entries, idx, Node(newNode)))
                 | Node(Node = node) ->
                     let newNode =
                         node.assoc (shift + 5) hash key value addedLeaf
@@ -231,7 +231,7 @@ and SHMNode2 =
                     if newNode = node then
                         this
                     else
-                        BitmapNode2(bitmap, cloneAndSet (entries, idx, Node(newNode)))
+                        BitmapNode2(ref bitmap.Value, cloneAndSet (entries, idx, Node(newNode)))
 
         | CollisionNode2 (Hash = h; Count = count; KVs = kvs) ->
             if hash = h then
@@ -242,16 +242,16 @@ and SHMNode2 =
                     if kv.value () = value then
                         this
                     else
-                        CollisionNode2(hash, count, cloneAndSet (kvs, idx, MapEntry(key, value)))
+                        CollisionNode2(hash, ref count.Value, cloneAndSet (kvs, idx, MapEntry(key, value)))
                 | None ->
-                    let newArray: MapEntry [] = count + 1 |> Array.zeroCreate
-                    Array.Copy(kvs, 0, newArray, 0, count)
-                    newArray.[count] <- MapEntry(key, value)
+                    let newArray: MapEntry [] = count.Value + 1 |> Array.zeroCreate
+                    Array.Copy(kvs, 0, newArray, 0, count.Value)
+                    newArray.[count.Value] <- MapEntry(key, value)
                     addedLeaf.set ()
-                    CollisionNode2(hash, count + 1, newArray)
+                    CollisionNode2(hash, ref (count.Value + 1), newArray)
             else
                 BitmapNode2(
-                    bitPos (hash, shift),
+                    ref (bitPos (hash, shift)),
                     [| Node(this) |]
                 )
                     .assoc
@@ -283,7 +283,7 @@ and SHMNode2 =
                 bitmap <- bitmap ||| 1 <<< i
                 j <- j + 1
 
-        BitmapNode2(bitmap, newArray)
+        BitmapNode2(ref bitmap, newArray)
 
 
     member this.without (shift: int) (hash: int) (key: obj) : SHMNode2 option =
@@ -296,20 +296,20 @@ and SHMNode2 =
             | Some node ->
                 match node.without (shift + 5) hash key with
                 | None -> // this branch got deleted
-                    if count <= 8 then
-                        SHMNode2.pack count nodes idx |> Some // shrink
+                    if count.Value <= 8 then
+                        SHMNode2.pack count.Value nodes idx |> Some // shrink
                     else
-                        ArrayNode2(count - 1, cloneAndSet (nodes, idx, None))
+                        ArrayNode2(ref (count.Value - 1), cloneAndSet (nodes, idx, None))
                         |> Some // zero out this entry
                 | Some newNode ->
                     if newNode = node then
                         this |> Some
                     else
-                        ArrayNode2(count - 1, cloneAndSet (nodes, idx, Some newNode))
+                        ArrayNode2(ref (count.Value - 1), cloneAndSet (nodes, idx, Some newNode))
                         |> Some
 
         | BitmapNode2 (Bitmap = bitmap; Entries = entries) ->
-            match hashToIndex hash shift bitmap with
+            match hashToIndex hash shift bitmap.Value with
             | None -> this |> Some
             | Some idx ->
                 let entry = entries.[idx]
@@ -319,10 +319,10 @@ and SHMNode2 =
                     if equiv (k, key) then
                         let bit = bitPos (hash, shift)
 
-                        if bitmap = bit then // only one entry
+                        if bitmap.Value = bit then // only one entry
                             None
                         else
-                            BitmapNode2(bitmap ^^^ bit, removeEntry (entries, idx))
+                            BitmapNode2(ref (bitmap.Value ^^^ bit), removeEntry (entries, idx))
                             |> Some
                     else
                         this |> Some
@@ -333,17 +333,17 @@ and SHMNode2 =
                         if n = node then
                             this |> Some
                         else
-                            BitmapNode2(bitmap, cloneAndSet (entries, idx, Node(n)))
+                            BitmapNode2(ref bitmap.Value, cloneAndSet (entries, idx, Node(n)))
                             |> Some
 
         | CollisionNode2 (Hash = h; Count = count; KVs = kvs) ->
             match SHMNode2.tryFindCNodeIndex (key, kvs) with
             | None -> this |> Some
             | Some idx ->
-                if count = 1 then
+                if count.Value = 1 then
                     None
                 else
-                    CollisionNode2(h, count - 1, removeEntry (kvs, idx))
+                    CollisionNode2(h, ref (count.Value - 1), removeEntry (kvs, idx))
                     |> Some
 
 
