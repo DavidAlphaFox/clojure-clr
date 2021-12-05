@@ -915,7 +915,7 @@ and [<Sealed; AllowNullLiteral>] internal BitmapIndexedNode(e, b, a) =
                                     array.[j + 1] :?> INode
                                 else
                                     (BitmapIndexedNode.Empty :> INode)
-                                        .assoc (shift + 5, Util.hash (array.[j]), array.[j], array.[j + 1], addedLeaf)
+                                        .assoc (shift + 5, INodeOps.hash(array.[j]), array.[j], array.[j + 1], addedLeaf)
 
                             j <- j + 2
 
@@ -1092,7 +1092,7 @@ and [<Sealed; AllowNullLiteral>] internal BitmapIndexedNode(e, b, a) =
                                         .assoc (
                                             edit,
                                             shift + 5,
-                                            Util.hash (array.[j]),
+                                            INodeOps.hash (array.[j]),
                                             array.[j],
                                             array.[j + 1],
                                             addedLeaf

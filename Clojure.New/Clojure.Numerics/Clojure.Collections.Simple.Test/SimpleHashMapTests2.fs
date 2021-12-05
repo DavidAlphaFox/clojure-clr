@@ -1,132 +1,47 @@
-﻿module PersistentHashMapTests
+﻿module SimpleHashMap2Tests
+
+// TODO:  many of tese tests are identical to those in PersistentHashMapTests.
+// Figure out how to consolidate.
 
 open Expecto
-open Clojure.Collections
-open TestHelpers
-open System
+open Clojure.Collections.Simple
 open System.Collections
+open Clojure.Collections
 open System.Collections.Generic
-
-// TODO:  many of tese tests are identical to those for PersistentHashMapTests.
-// Figure out how to consolidate.
-// I've marked the non-duplicate ones with a comment.
+open System
+open SimpleHashMapTests1
 
 
 [<Tests>]
-let basicPersistentHashMapCreateTests =
+let basicSimpleHashMap2CreateTests =
     testList
-        "Basic PersistentHashMap create tests"
+        "Basic SimpleHashMap2 create tests"
         [
 
-          // Non-duplicate
+
           testCase "Create on empty list returns empty map"
           <| fun _ ->
               let a = ArrayList()
-
-              let m =
-                  PersistentHashMap.create1 (a) :> IPersistentMap
+              let m = SimpleHashMap2.create1 (a)
 
               Expect.equal (m.count ()) 0 "Empty map should have 0 count"
 
-          // Non-duplicate
           testCase "Create on non-empty list returns non-empty map"
           <| fun _ ->
               let items: obj [] = [| 1; "a"; 2; "b" |]
               let a = ArrayList(items)
-
-              let m =
-                  PersistentHashMap.create1 (a) :> IPersistentMap
+              let m = SimpleHashMap2.create1 (a)
 
               Expect.equal (m.count ()) 2 "Count should match # dict entries"
               Expect.equal (m.valAt (1)) (upcast "a") "m[1]=a"
               Expect.equal (m.valAt (2)) (upcast "b") "m[2]=b"
               Expect.isTrue (m.containsKey (1)) "Check containsKey"
               Expect.isFalse (m.containsKey (3)) "Shouldn't contain some random key"
-
-          // Non-duplicate
-          testCase "Create on empty ISeq returns empty map"
-          <| fun _ ->
-              let items: obj [] = Array.empty
-              let a = ArrayList(items)
-              let s = PersistentList.create(a).seq ()
-
-              let m =
-                  PersistentHashMap.create (s) :> IPersistentMap
-
-              Expect.equal (m.count ()) 0 "Empty map should have 0 count"
-
-          // Non-duplicate
-          testCase "Create on ISeq returns map"
-          <| fun _ ->
-              let items: obj [] = [| 1; "a"; 2; "b" |]
-              let a = ArrayList(items)
-              let s = PersistentList.create(a).seq ()
-
-              let m =
-                  PersistentHashMap.create (s) :> IPersistentMap
-
-              Expect.equal (m.count ()) 2 "Count should match # dict entries"
-              Expect.equal (m.valAt (1)) (upcast "a") "m[1]=a"
-              Expect.equal (m.valAt (2)) (upcast "b") "m[2]=b"
-              Expect.isTrue (m.containsKey (1)) "Check containsKey"
-              Expect.isFalse (m.containsKey (3)) "Shouldn't contain some random key"
-
-          // Non-duplicate
-          testCase "Create on no args return empty map"
-          <| fun _ ->
-              let m =
-                  PersistentHashMap.create () :> IPersistentMap
-
-              Expect.equal (m.count ()) 0 "Empty map should have 0 count"
-              Expect.isNull ((m :?> IMeta).meta ()) "Empty map should have no meta"
-
-          // Non-duplicate
-          testCase "Create on args returns map"
-          <| fun _ ->
-              let m =
-                  PersistentHashMap.create (1, "a", 2, "b") :> IPersistentMap
-
-              Expect.equal (m.count ()) 2 "Count should match # dict entries"
-              Expect.equal (m.valAt (1)) (upcast "a") "m[1]=a"
-              Expect.equal (m.valAt (2)) (upcast "b") "m[2]=b"
-              Expect.isFalse (m.containsKey (3)) "Shouldn't contain some random key"
-
-          // Non-duplicate
-          testCase "Create on met no args return empty map"
-          <| fun _ ->
-              let meta = metaForSimpleTests
-
-              let m =
-                  PersistentHashMap.create (meta :> IPersistentMap) :> IPersistentMap
-
-              Expect.equal (m.count ()) 0 "Empty map should have 0 count"
-              Expect.isTrue (Object.ReferenceEquals((m :?> IMeta).meta (), meta)) "Should have identical meta"
-
-          // Non-duplicate
-          testCase "Create on metaargs returns map"
-          <| fun _ ->
-              let meta = metaForSimpleTests
-              let init: obj [] = [| 1; "a"; 2; "b" |]
-
-              let m =
-                  PersistentHashMap.create (meta, init) :> IPersistentMap
-
-              Expect.equal (m.count ()) 2 "Count should match # dict entries"
-              Expect.equal (m.valAt (1)) (upcast "a") "m[1]=a"
-              Expect.equal (m.valAt (2)) (upcast "b") "m[2]=b"
-              Expect.isFalse (m.containsKey (3)) "Shouldn't contain some random key"
-              Expect.isTrue (Object.ReferenceEquals((m :?> IMeta).meta (), meta)) "Should have identical meta" ]
-
-[<Tests>]
-let basicPersistentHashMapTests =
-    testList
-        "Basic PersistentHashMap Tests"
-        [
 
           testCase "Create on empty dictionary returns empty map"
           <| fun _ ->
               let d: Dictionary<int, string> = Dictionary()
-              let m = PersistentHashMap.create (d)
+              let m = SimpleHashMap2.create (d)
 
               Expect.equal (m.count ()) 0 "Empty map should have 0 count"
 
@@ -136,7 +51,7 @@ let basicPersistentHashMapTests =
               d.[1] <- "a"
               d.[2] <- "b"
 
-              let m = PersistentHashMap.create (d)
+              let m = SimpleHashMap2.create (d)
 
               Expect.equal (m.count ()) 2 "Count should match # dict entries"
               Expect.equal (m.valAt (1)) (upcast "a") "m[1]=a"
@@ -146,10 +61,11 @@ let basicPersistentHashMapTests =
 
           ]
 
+
 [<Tests>]
-let basicPersistentHashMapAssocTests =
+let basicSimpleHashMap2AssocTests =
     testList
-        "Basic P.H.M Assoc tests"
+        "Basic SimpleHashMap2 Assoc tests"
         [
 
           testCase "containsKey on missing key fails"
@@ -158,7 +74,7 @@ let basicPersistentHashMapAssocTests =
               d.[1] <- "a"
               d.[2] <- "b"
 
-              let m = PersistentHashMap.create (d)
+              let m = SimpleHashMap2.create (d)
 
               Expect.isFalse (m.containsKey (3)) "Should not contain key"
 
@@ -168,7 +84,7 @@ let basicPersistentHashMapAssocTests =
               d.[1] <- "a"
               d.[2] <- "b"
 
-              let m = PersistentHashMap.create (d)
+              let m = SimpleHashMap2.create (d)
 
               Expect.isTrue (m.containsKey (1)) "Should contain key"
               Expect.isTrue (m.containsKey (2)) "Should contain key"
@@ -179,7 +95,7 @@ let basicPersistentHashMapAssocTests =
               d.[1] <- "a"
               d.[2] <- "b"
 
-              let m = PersistentHashMap.create (d)
+              let m = SimpleHashMap2.create (d)
 
               Expect.isFalse (m.containsKey ("a")) "Should not see value as a key"
 
@@ -189,10 +105,9 @@ let basicPersistentHashMapAssocTests =
               d.[1] <- "a"
               d.[2] <- "b"
 
-              let m = PersistentHashMap.create (d)
+              let m = SimpleHashMap2.create (d)
 
               Expect.isNull (m.entryAt (3)) "Should have null entryAt"
-
 
           testCase "entryAt returns proper entry for existing key"
           <| fun _ ->
@@ -200,7 +115,7 @@ let basicPersistentHashMapAssocTests =
               d.[1] <- "a"
               d.[2] <- "b"
 
-              let m = PersistentHashMap.create (d)
+              let m = SimpleHashMap2.create (d)
               let me = m.entryAt (1)
 
               Expect.equal (me.key ()) (upcast 1) "Should be the key"
@@ -213,7 +128,7 @@ let basicPersistentHashMapAssocTests =
               d.[1] <- "a"
               d.[2] <- "b"
 
-              let m = PersistentHashMap.create (d)
+              let m = SimpleHashMap2.create (d)
 
               Expect.isNull (m.valAt (3)) "Should have null valAt"
 
@@ -224,7 +139,7 @@ let basicPersistentHashMapAssocTests =
               d.[1] <- "a"
               d.[2] <- "b"
 
-              let m = PersistentHashMap.create (d)
+              let m = SimpleHashMap2.create (d)
 
               Expect.equal (m.valAt (1)) (upcast "a") "Should have correct value"
 
@@ -235,7 +150,7 @@ let basicPersistentHashMapAssocTests =
               d.[1] <- "a"
               d.[2] <- "b"
 
-              let m = PersistentHashMap.create (d)
+              let m = SimpleHashMap2.create (d)
 
               Expect.equal (m.valAt (3, 99)) (upcast 99) "Should have not-found value"
 
@@ -246,14 +161,14 @@ let basicPersistentHashMapAssocTests =
               d.[1] <- "a"
               d.[2] <- "b"
 
-              let m = PersistentHashMap.create (d)
+              let m = SimpleHashMap2.create (d)
 
               Expect.equal (m.valAt (1, 99)) (upcast "a") "Should have correct value" ]
 
 [<Tests>]
-let basicPersistentHashMapPersistentCollectionTests =
+let basicSimpleHashMap2PersistentCollectionTests =
     testList
-        "Basic P.H.M PersistentCollection tests"
+        "Basic SimpleHashMap2 PersistentCollection tests"
         [
 
           testCase "count on empty is 0"
@@ -262,7 +177,7 @@ let basicPersistentHashMapPersistentCollectionTests =
               d.[1] <- "a"
               d.[2] <- "b"
 
-              let m = PersistentHashMap.create (d)
+              let m = SimpleHashMap2.create (d)
               let c = m.empty ()
 
               Expect.equal (c.count ()) 0 "Empty.count() = 0"
@@ -273,7 +188,7 @@ let basicPersistentHashMapPersistentCollectionTests =
               d.[1] <- "a"
               d.[2] <- "b"
 
-              let m = PersistentHashMap.create (d)
+              let m = SimpleHashMap2.create (d)
 
               Expect.equal (m.count ()) 2 "Count of keys"
 
@@ -283,7 +198,7 @@ let basicPersistentHashMapPersistentCollectionTests =
               d.[1] <- "a"
               d.[2] <- "b"
 
-              let m = PersistentHashMap.create (d)
+              let m = SimpleHashMap2.create (d)
               let c = m.empty ()
 
               Expect.isNull (c.seq ()) "Seq on empty should be null"
@@ -294,7 +209,7 @@ let basicPersistentHashMapPersistentCollectionTests =
               d.[1] <- "a"
               d.[2] <- "b"
 
-              let m = PersistentHashMap.create (d)
+              let m = SimpleHashMap2.create (d)
               let s = m.seq ()
               let me1 = s.first () :?> IMapEntry
               let me2 = s.next().first () :?> IMapEntry
@@ -304,14 +219,12 @@ let basicPersistentHashMapPersistentCollectionTests =
               Expect.equal (me1.value ()) (m.valAt (me1.key ())) "K/V pair should match map"
               Expect.equal (me2.value ()) (m.valAt (me2.key ())) "K/V pair should match map"
               Expect.notEqual (me1.key ()) (me2.key ()) "Should see different keys"
-              Expect.isNull last "end of seq should be null"
-
-          ]
+              Expect.isNull last "end of seq should be null" ]
 
 [<Tests>]
-let basicPersistentHashMapPersistentMapTests =
+let basicSimpleHashMap2PersistentMapTests =
     testList
-        "Basic P.H.M PersistentMap tests"
+        "Basic SimpleHashMap2 tests"
         [
 
           testCase "assoc modifies value for existing key"
@@ -320,7 +233,7 @@ let basicPersistentHashMapPersistentMapTests =
               d.[1] <- "a"
               d.[2] <- "b"
 
-              let m1 = PersistentHashMap.create (d)
+              let m1 = SimpleHashMap2.create (d)
               let m2 = m1.assoc (2, "c")
 
               Expect.equal (m1.count ()) 2 "Original map count unchanged"
@@ -334,7 +247,7 @@ let basicPersistentHashMapPersistentMapTests =
               d.[1] <- "a"
               d.[2] <- "b"
 
-              let m1 = PersistentHashMap.create (d)
+              let m1 = SimpleHashMap2.create (d)
               let m2 = m1.assoc (3, "c")
 
               Expect.equal (m1.count ()) 2 "Original map count unchanged"
@@ -348,7 +261,7 @@ let basicPersistentHashMapPersistentMapTests =
               d.[1] <- "a"
               d.[2] <- "b"
 
-              let m1 = PersistentHashMap.create (d)
+              let m1 = SimpleHashMap2.create (d)
               let f () = m1.assocEx (2, "c") |> ignore
 
               Expect.throwsT<InvalidOperationException> f "AssocEx throws on existing key"
@@ -359,7 +272,7 @@ let basicPersistentHashMapPersistentMapTests =
               d.[1] <- "a"
               d.[2] <- "b"
 
-              let m1 = PersistentHashMap.create (d)
+              let m1 = SimpleHashMap2.create (d)
               let m2 = m1.assocEx (3, "c")
 
               Expect.equal (m1.count ()) 2 "Original map count unchanged"
@@ -375,7 +288,7 @@ let basicPersistentHashMapPersistentMapTests =
               d.[5] <- "b"
               d.[7] <- "c"
 
-              let m1 = PersistentHashMap.create (d)
+              let m1 = SimpleHashMap2.create (d)
               let m2 = m1.without (5)
 
               Expect.equal (m1.count ()) 3 "Original map has original count"
@@ -391,7 +304,7 @@ let basicPersistentHashMapPersistentMapTests =
               d.[5] <- "b"
               d.[7] <- "c"
 
-              let m1 = PersistentHashMap.create (d)
+              let m1 = SimpleHashMap2.create (d)
               let m2 = m1.without (4)
 
               Expect.isTrue (m1 = m2) "No change"
@@ -405,18 +318,17 @@ let basicPersistentHashMapPersistentMapTests =
               d.[5] <- "b"
               d.[7] <- "c"
 
-              let m1 = PersistentHashMap.create (d)
+              let m1 = SimpleHashMap2.create (d)
               let m2 = m1.without(3).without(5).without (7)
 
               Expect.equal (m2.count ()) 0 "Should be no entries remaining"
 
-        
           ]
 
 [<Tests>]
 let aPersistentMapTests =
     testList
-        "APersistentMap tests for PersistentHashMap"
+        "APersistentMap tests for SimpleHashMap2"
         [
 
           testCase "Equiv on similar dictionary"
@@ -425,7 +337,7 @@ let aPersistentMapTests =
               d.[1] <- "a"
               d.[2] <- "b"
 
-              let m = PersistentHashMap.create (d)
+              let m = SimpleHashMap2.create (d)
 
               Expect.isTrue (m.equiv (d)) "Equal on same dictionary"
 
@@ -435,7 +347,7 @@ let aPersistentMapTests =
               d.[1] <- "a"
               d.[2] <- "b"
 
-              let m = PersistentHashMap.create (d)
+              let m = SimpleHashMap2.create (d)
 
               d.[2] <- "c"
 
@@ -447,7 +359,7 @@ let aPersistentMapTests =
               d.[1] <- "a"
               d.[2] <- "b"
 
-              let m = PersistentHashMap.create (d)
+              let m = SimpleHashMap2.create (d)
 
               d.[3] <- "c"
 
@@ -459,12 +371,12 @@ let aPersistentMapTests =
               d.[1] <- "a"
               d.[2] <- "b"
 
-              let m1 = PersistentHashMap.create (d)
+              let m1 = SimpleHashMap2.create (d)
 
               d.[2] <- "c"
 
 
-              let m2 = PersistentHashMap.create (d)
+              let m2 = SimpleHashMap2.create (d)
 
               Expect.notEqual (m1.GetHashCode()) (m2.GetHashCode()) "Hash codes should differ"
 
@@ -474,9 +386,7 @@ let aPersistentMapTests =
               d.[1] <- "a"
               d.[2] <- "b"
 
-              let a =
-                  PersistentHashMap.create (d) :> Associative
-
+              let a = SimpleHashMap2.create (d) :> Associative
               let a1 = a.assoc (3, "c")
               let a2 = a.assoc (2, "c")
 
@@ -503,7 +413,7 @@ let aPersistentMapTests =
               d.[1] <- "a"
               d.[2] <- "b"
 
-              let m = PersistentHashMap.create (d)
+              let m = SimpleHashMap2.create (d)
               let c = m.cons (MapEntry(3, "c"))
 
               Expect.equal (m.count ()) 2 "Original has unchanged count"
@@ -522,7 +432,7 @@ let aPersistentMapTests =
               d.[1] <- "a"
               d.[2] <- "b"
 
-              let m = PersistentHashMap.create (d)
+              let m = SimpleHashMap2.create (d)
               let c = m.cons (MapEntry(2, "c"))
 
               Expect.equal (m.count ()) 2 "Original has unchanged count"
@@ -540,7 +450,7 @@ let aPersistentMapTests =
               d.[1] <- "a"
               d.[2] <- "b"
 
-              let m = PersistentHashMap.create (d)
+              let m = SimpleHashMap2.create (d)
               let c = m.cons (DictionaryEntry(3, "c"))
 
               Expect.equal (m.count ()) 2 "Original has unchanged count"
@@ -559,7 +469,7 @@ let aPersistentMapTests =
               d.[1] <- "a"
               d.[2] <- "b"
 
-              let m = PersistentHashMap.create (d)
+              let m = SimpleHashMap2.create (d)
               let c = m.cons (DictionaryEntry(2, "c"))
 
               Expect.equal (m.count ()) 2 "Original has unchanged count"
@@ -576,7 +486,7 @@ let aPersistentMapTests =
               d.[1] <- "a"
               d.[2] <- "b"
 
-              let m = PersistentHashMap.create (d)
+              let m = SimpleHashMap2.create (d)
               let c = m.cons (KeyValuePair(3, "c"))
 
               Expect.equal (m.count ()) 2 "Original has unchanged count"
@@ -595,7 +505,7 @@ let aPersistentMapTests =
               d.[1] <- "a"
               d.[2] <- "b"
 
-              let m = PersistentHashMap.create (d)
+              let m = SimpleHashMap2.create (d)
               let c = m.cons (KeyValuePair(2, "c"))
 
               Expect.equal (m.count ()) 2 "Original has unchanged count"
@@ -606,64 +516,19 @@ let aPersistentMapTests =
               Expect.equal (c.valAt (1)) ("a" :> obj) "Updated unchanged on untouched key"
               Expect.equal (c.valAt (2)) ("c" :> obj) "Updated has new value"
 
-          // TODO:  Activate these tests once we have writtent PersistentVector
-          //testCase "cons on IPersistentVector adds new" <| fun _ ->
-          //    let d : Dictionary<int,string> = Dictionary()
-          //    d.[1] <- "a"
-          //    d.[2] <- "b"
-
-          //    let m = PersistentHashMap.create(d)
-          //    let c = m.cons(PersistentVector.create(3,"c"))
-
-          //    Expect.equal (m.count()) 2 "Original has unchanged count"
-          //    Expect.equal (m.valAt(1)) ("a" :> obj) "Original unchanged on untouched key"
-          //    Expect.equal (m.valAt(2)) ("b" :> obj) "Original unchanged on untouched key"
-          //    Expect.isFalse (m.containsKey(3)) "Original should not have new key"
-
-          //    Expect.equal (c.count()) 3 "Updated has higher count"
-          //    Expect.equal (c.valAt(1)) ("a" :> obj) "Updated unchanged on untouched key"
-          //    Expect.equal (c.valAt(2)) ("b" :> obj) "Updated unchanged on untouched key"
-          //    Expect.equal (c.valAt(3)) ("c" :> obj) "Updated has new key"
-
-          //testCase "cons on IPersistentVector replaces existing" <| fun _ ->
-          //    let d : Dictionary<int,string> = Dictionary()
-          //    d.[1] <- "a"
-          //    d.[2] <- "b"
-
-          //    let m = PersistentHashMap.create(d)
-          //    let c = m.cons(PersistentVector.create(2,"c"))
-
-          //    Expect.equal (m.count()) 2 "Original has unchanged count"
-          //    Expect.equal (m.valAt(1)) ("a" :> obj) "Original unchanged on untouched key"
-          //    Expect.equal (m.valAt(2)) ("b" :> obj) "Original unchanged on untouched key"
-
-          //    Expect.equal (c.count()) 2 "Updated has higher count"
-          //    Expect.equal (c.valAt(1)) ("a" :> obj) "Updated unchanged on untouched key"
-          //    Expect.equal (c.valAt(2)) ("c" :> obj) "Updated has new value"
-
-          //testCase "cons on IPersistentVector replaces existing" <| fun _ ->
-          //    let d : Dictionary<int,string> = Dictionary()
-          //    d.[1] <- "a"
-          //    d.[2] <- "b"
-
-          //    let m = PersistentHashMap.create(d)
-          //    let f() = m.cons(PersistentVector.create(2,"c",3,"d"))
-
-          //    Expect.throwsT<ArgumentException> f "should fail on IPersisntetVector with incorrect number of entries"
-
-          testCase "cons on IPersistentMap adds/repalces many"
+          testCase "cons on SimpleHashMap2 adds/repalces many"
           <| fun _ ->
               let d1: Dictionary<int, string> = Dictionary()
               d1.[1] <- "a"
               d1.[2] <- "b"
 
-              let m1 = PersistentHashMap.create (d1)
+              let m1 = SimpleHashMap2.create (d1)
 
               let d2: Dictionary<int, string> = Dictionary()
               d2.[2] <- "c"
               d2.[3] <- "d"
 
-              let m2 = PersistentHashMap.create (d2)
+              let m2 = SimpleHashMap2.create (d2)
               let m3 = m1.cons (m2)
 
               Expect.equal (m1.count ()) 2 "Original should have same count"
@@ -678,194 +543,140 @@ let aPersistentMapTests =
               Expect.equal (m3.valAt (2)) ("c" :> obj) "Updated should have updated key value"
               Expect.equal (m3.valAt (3)) ("d" :> obj) "Updated should have new key value"
 
-          testCase "invoke(k) does valAt(k)"
-          <| fun _ ->
-              let d: Dictionary<int, string> = Dictionary()
-              d.[1] <- "a"
-              d.[2] <- "b"
+          //testCase "invoke(k) does valAt(k)" <| fun _ ->
+          //     let d : Dictionary<int,string> = Dictionary()
+          //     d.[1] <- "a"
+          //     d.[2] <- "b"
 
-              let f = PersistentHashMap.create (d) :?> IFn
+          //     let f = SimpleHashMap2.create(d) :?> IFn
 
-              Expect.equal (f.invoke (1)) ("a" :> obj) "Does ValAt, finds key"
-              Expect.isNull (f.invoke (7)) "Does ValAt, does not find key"
+          //     Expect.equal (f.invoke(1)) ("a" :> obj) "Does ValAt, finds key"
+          //     Expect.isNull (f.invoke(7))  "Does ValAt, does not find key"
 
-          testCase "invoke(k,nf) does valAt(k,nf)"
-          <| fun _ ->
-              let d: Dictionary<int, string> = Dictionary()
-              d.[1] <- "a"
-              d.[2] <- "b"
+          //testCase "invoke(k,nf) does valAt(k,nf)" <| fun _ ->
+          //     let d : Dictionary<int,string> = Dictionary()
+          //     d.[1] <- "a"
+          //     d.[2] <- "b"
 
-              let f = PersistentHashMap.create (d) :?> IFn
+          //     let f = SimpleHashMap2.create(d) :?> IFn
 
-              Expect.equal (f.invoke (1, 99)) ("a" :> obj) "Does ValAt, finds key"
-              Expect.equal (f.invoke (7, 99)) (99 :> obj) "Does ValAt, returns notFound value"
+          //     Expect.equal (f.invoke(1,99)) ("a" :> obj) "Does ValAt, finds key"
+          //     Expect.equal (f.invoke(7,99)) (99 :> obj) "Does ValAt, returns notFound value"
 
 
-          testCase "Dictionary operations fail as necessary"
-          <| fun _ ->
-              let d: Dictionary<int, string> = Dictionary()
-              d.[1] <- "a"
-              d.[2] <- "b"
+          //testCase "Dictionary operations fail as necessary" <| fun _ ->
+          //     let d : Dictionary<int,string> = Dictionary()
+          //     d.[1] <- "a"
+          //     d.[2] <- "b"
 
-              let id =
-                  PersistentHashMap.create (d) :?> IDictionary
+          //     let id = SimpleHashMap2.create(d) :?> IDictionary
 
-              let fadd () = id.Add(3, "c")
-              let fclear () = id.Clear()
-              let fremove () = id.Remove(1)
+          //     let fadd() = id.Add(3,"c")
+          //     let fclear() = id.Clear()
+          //     let fremove() = id.Remove(1)
 
-              Expect.throwsT<InvalidOperationException> fadd "add operation should fail"
-              Expect.throwsT<InvalidOperationException> fclear "clear operation should fail"
-              Expect.throwsT<InvalidOperationException> fremove "remove operation should fail"
+          //     Expect.throwsT<InvalidOperationException> fadd "add operation should fail"
+          //     Expect.throwsT<InvalidOperationException> fclear "clear operation should fail"
+          //     Expect.throwsT<InvalidOperationException> fremove "remove operation should fail"
 
-          testCase "Dictionary operations success as necessary"
-          <| fun _ ->
-              let d: Dictionary<int, string> = Dictionary()
-              d.[1] <- "a"
-              d.[2] <- "b"
+          //testCase "Dictionary operations success as necessary" <| fun _ ->
+          //     let d : Dictionary<int,string> = Dictionary()
+          //     d.[1] <- "a"
+          //     d.[2] <- "b"
 
-              let id =
-                  PersistentHashMap.create (d) :?> IDictionary
+          //     let id = SimpleHashMap2.create(d) :?> IDictionary
 
-              Expect.isTrue (id.Contains(1)) "Finds existing key"
-              Expect.isFalse (id.Contains(7)) "Does not find absent key"
-              Expect.isTrue (id.IsFixedSize) "fixedSize is true"
-              Expect.isTrue (id.IsReadOnly) "readOnly is true"
-              Expect.equal (id.[2]) ("b" :> obj) "Indexing works on existing key"
-              Expect.isNull (id.[7]) "Indexing is null on absent key"
+          //     Expect.isTrue (id.Contains(1)) "Finds existing key"
+          //     Expect.isFalse (id.Contains(7))  "Does not find absent key"
+          //     Expect.isTrue  (id.IsFixedSize) "fixedSize is true"
+          //     Expect.isTrue (id.IsReadOnly) "readOnly is true"
+          //     Expect.equal (id.[2]) ("b" :> obj) "Indexing works on existing key"
+          //     Expect.isNull (id.[7]) "Indexing is null on absent key"
 
-          testCase "Dictionary Keys/Values work"
-          <| fun _ ->
-              let d: Dictionary<int, string> = Dictionary()
-              d.[1] <- "a"
-              d.[2] <- "b"
+          //testCase "Dictionary Keys/Values work" <| fun _ ->
+          //     let d : Dictionary<int,string> = Dictionary()
+          //     d.[1] <- "a"
+          //     d.[2] <- "b"
 
-              let id =
-                  PersistentHashMap.create (d) :?> IDictionary
+          //     let id = SimpleHashMap2.create(d) :?> IDictionary
+          //     let keys = id.Keys
+          //     let vals = id.Values
 
-              let keys = id.Keys
-              let vals = id.Values
+          //     Expect.equal (keys.Count) 2 "Keys has correct count"
+          //     Expect.equal (vals.Count) 2 "Values has correct count"
 
-              Expect.equal (keys.Count) 2 "Keys has correct count"
-              Expect.equal (vals.Count) 2 "Values has correct count"
+          //     let akeys : obj[] = Array.zeroCreate 2
+          //     let avals : obj[] = Array.zeroCreate 2
 
-              let akeys: obj [] = Array.zeroCreate 2
-              let avals: obj [] = Array.zeroCreate 2
+          //     keys.CopyTo(akeys,0)
+          //     vals.CopyTo(avals,0)
 
-              keys.CopyTo(akeys, 0)
-              vals.CopyTo(avals, 0)
+          //     Array.Sort(akeys)
+          //     Array.Sort(avals)
 
-              Array.Sort(akeys)
-              Array.Sort(avals)
+          //     Expect.equal akeys.[0] (box 1) "first key"
+          //     Expect.equal akeys.[1] (box 2) "second key"
 
-              Expect.equal akeys.[0] (box 1) "first key"
-              Expect.equal akeys.[1] (box 2) "second key"
-
-              Expect.equal avals.[0] (upcast "a") "first val"
-              Expect.equal avals.[1] (upcast "b") "second val"
+          //     Expect.equal avals.[0] (upcast "a") "first val"
+          //     Expect.equal avals.[1] (upcast "b") "second val"
 
 
-          testCase "Dictionary enumerator works"
-          <| fun _ ->
-              let d: Dictionary<int, string> = Dictionary()
-              d.[1] <- "a"
-              d.[2] <- "b"
+          //testCase "Dictionary enumerator works" <| fun _ ->
+          //     let d : Dictionary<int,string> = Dictionary()
+          //     d.[1] <- "a"
+          //     d.[2] <- "b"
 
-              let id =
-                  PersistentHashMap.create (d) :?> IDictionary
+          //     let id = SimpleHashMap2.create(d) :?> IDictionary
+          //     let ie = id.GetEnumerator()
 
-              let ie = id.GetEnumerator()
+          //     Expect.isTrue (ie.MoveNext()) "Move to first element"
+          //     let de1 = ie.Current :?> IMapEntry
+          //     Expect.isTrue (ie.MoveNext()) "Move to second element"
+          //     let de2 = ie.Current :?> IMapEntry
+          //     Expect.isFalse (ie.MoveNext()) "Move past end"
 
-              Expect.isTrue (ie.MoveNext()) "Move to first element"
-              let de1 = ie.Current :?> IMapEntry
-              Expect.isTrue (ie.MoveNext()) "Move to second element"
-              let de2 = ie.Current :?> IMapEntry
-              Expect.isFalse (ie.MoveNext()) "Move past end"
-
-              // Could be either order
-              Expect.isTrue
-                  (match de1.key () :?> int32, de1.value () :?> string, de2.key () :?> int32, de2.value () :?> string
-                       with
-                   | 1, "a", 2, "b"
-                   | 2, "b", 1, "a" -> true
-                   | _ -> false)
-                  "matched key/val pairs"
+          //     // Could be either order
+          //     Expect.isTrue (
+          //         match de1.key() :?> int32, de1.value() :?> string, de2.key() :?> int32, de2.value() :?> string with
+          //         |  1, "a", 2, "b"
+          //         |  2 , "b", 1, "a" -> true
+          //         | _ -> false
+          //         )
+          //         "matched key/val pairs"
 
 
-          testCase "ICollection goodies work"
-          <| fun _ ->
-              let d: Dictionary<int, string> = Dictionary()
-              d.[1] <- "a"
-              d.[2] <- "b"
+          //testCase "ICollection goodies work" <| fun _ ->
+          //     let d : Dictionary<int,string> = Dictionary()
+          //     d.[1] <- "a"
+          //     d.[2] <- "b"
 
-              let c =
-                  PersistentHashMap.create (d) :?> ICollection
+          //     let c = SimpleHashMap2.create(d) :?> ICollection
 
-              Expect.isTrue (c.IsSynchronized) "should be synchronized"
-              Expect.isTrue (Object.ReferenceEquals(c, c.SyncRoot)) "SyncRoot should be self"
-              Expect.equal (c.Count) 2 "Count should be correct"
+          //     Expect.isTrue (c.IsSynchronized) "should be synchronized"
+          //     Expect.isTrue (Object.ReferenceEquals(c,c.SyncRoot)) "SyncRoot should be self"
+          //     Expect.equal (c.Count) 2 "Count should be correct"
 
-              let a: IMapEntry [] = Array.zeroCreate c.Count
-              c.CopyTo(a, 0)
+          //     let a : IMapEntry[] = Array.zeroCreate c.Count
+          //     c.CopyTo(a,0)
 
-              // Could be either order
-              Expect.isTrue
-                  (match a.[0].key () :?> int32,
-                         a.[0].value () :?> string,
-                         a.[1].key () :?> int32,
-                         a.[1].value () :?> string
-                       with
-                   | 1, "a", 2, "b"
-                   | 2, "b", 1, "a" -> true
-                   | _ -> false)
-                  "matched key/val pairs"
+          //     // Could be either order
+          //     Expect.isTrue (
+          //         match a.[0].key() :?> int32, a.[0].value() :?> string, a.[1].key() :?> int32, a.[1].value() :?> string with
+          //         |  1, "a", 2, "b"
+          //         |  2 , "b", 1, "a" -> true
+          //         | _ -> false
+          //         )
+          //         "matched key/val pairs"
 
 
           ]
 
 
-[<Tests>]
-let PersistentHashMapIObjTests =
-    testList
-        "PersistentHashMap IObj tests"
-        [
-
-          testCase "Verify PersistentHashMap.IObj"
-          <| fun _ ->
-              let d: Dictionary<int, string> = Dictionary()
-              d.[1] <- "a"
-              d.[2] <- "b"
-
-              let m = PersistentHashMap.create (d) :?> IObj
-              let pm = m.withMeta (metaForSimpleTests)
-
-              verifyNullMeta m
-              verifyWithMetaHasCorrectMeta pm
-              verifyWithMetaNoChange m
-              verifyWithMetaReturnType m typeof<PersistentHashMap>
-
-         ]
-
-
-//  Make a type with a restricted set of hash code values to test hash collision logic
-
-type CollisionKey(id, factor) =
-    override this.GetHashCode() = id % factor
-
-    override this.Equals(o) =
-        match o with
-        | :? CollisionKey as ck -> ck.Id = this.Id
-        | _ -> false
-
-    member _.Id = id
-    member _.Factor = factor
-
-let testCollisions (numEntries: int) (numHashCodes: int) : unit =
+let testCollisions2 (numEntries: int) (numHashCodes: int) : unit =
 
     // create map with entries  key=CollisionKey(i,_), value = i
 
-    let mutable m =
-        PersistentHashMap.Empty :> IPersistentMap
+    let mutable m = SimpleHashMap2.Empty :> IPersistentMap
 
     for i = 0 to numEntries - 1 do
         m <- m.assoc (CollisionKey(i, numHashCodes), i)
@@ -993,20 +804,22 @@ let testCollisions (numEntries: int) (numHashCodes: int) : unit =
 
 
 [<Tests>]
-let collisionTests =
+let collisionTests2 =
     testList
-        "PersistentHashMap collision tests"
-        [ testCase "Collisions 100 10"
+        "SimpleHashMap2 collision tests"
+        [ testCase "Collisions n m"
           <| fun _ ->
-              testCollisions 100 10
-              //testCollisions 1000 100
-              //testCollisions 10000 100
-              //testCollisions 100000 100
-              //testCollisions 1000000 3000 
-        ]
+              testCollisions2 100 10
+              testCollisions2 1000 100
+              testCollisions2 10000 100
+              testCollisions2 100000 100
+              testCollisions2 1000000 3000 ]
 
 
-let doBigTest (numEntries: int) =
+
+
+
+let doBigTest2 (numEntries: int) =
     printfn "Testing %i items." numEntries
 
     let rnd = Random()
@@ -1016,11 +829,14 @@ let doBigTest (numEntries: int) =
         let r = rnd.Next()
         dict.[r] <- r
 
-    let m = PersistentHashMap.create (dict)
+    let m = SimpleHashMap2.create (dict)
 
     Expect.equal (m.count ()) (dict.Count) "Should have same number of entries"
 
     for key in dict.Keys do
+        if not (m.containsKey (key)) then
+            Console.WriteLine("HERE!")
+
         Expect.isTrue (m.containsKey (key)) "dictionary key should be in map"
         Expect.equal (m.valAt (key)) (upcast key) "Value should be same as key"
 
@@ -1031,12 +847,73 @@ let doBigTest (numEntries: int) =
         Expect.isTrue (dict.ContainsKey(entry.key () :?> int)) "map key shoudl be in dictionary"
         s <- s.next ()
 
-
-
 [<Tests>]
-let bigPersistentHashMapTests =
+let bigPersistentHashMapTests2 =
     testList
         "big insertions into PersistentHashMap"
         [
 
-          testCase "test for 100" <| fun _ -> doBigTest 100 ]
+          testCase "test for 100" <| fun _ -> doBigTest2 100
+
+          testCase "test for 1000"
+          <| fun _ -> doBigTest2 1000
+
+          testCase "test for 2000"
+          <| fun _ -> doBigTest2 2000
+
+          testCase "test for 3000"
+          <| fun _ -> doBigTest2 3000
+
+          testCase "test for 4000"
+          <| fun _ -> doBigTest2 4000
+
+          testCase "test for 5000"
+          <| fun _ -> doBigTest2 5000
+
+          testCase "test for 6000"
+          <| fun _ -> doBigTest2 6000
+
+          testCase "test for 7000"
+          <| fun _ -> doBigTest2 7000
+
+          testCase "test for 8000"
+          <| fun _ -> doBigTest2 8000
+
+          testCase "test for 9000"
+          <| fun _ -> doBigTest2 9000
+
+          testCase "test for 10000"
+          <| fun _ -> doBigTest2 10000
+
+          testCase "test for 20000"
+          <| fun _ -> doBigTest2 20000
+
+          testCase "test for 30000"
+          <| fun _ -> doBigTest2 30000
+
+          testCase "test for 40000"
+          <| fun _ -> doBigTest2 40000
+
+          testCase "test for 50000"
+          <| fun _ -> doBigTest2 50000
+
+          testCase "test for 60000"
+          <| fun _ -> doBigTest2 60000
+
+          testCase "test for 70000"
+          <| fun _ -> doBigTest2 70000
+
+          testCase "test for 80000"
+          <| fun _ -> doBigTest2 80000
+
+          testCase "test for 90000"
+          <| fun _ -> doBigTest2 90000
+
+
+          //testCase "test for 100000" <| fun _ ->
+          //    doBigTest2 100000
+
+          //testCase "test for 1000000" <| fun _ ->
+          //        doBigTest2 1000000
+
+          ]

@@ -7,8 +7,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="SimpleHashMapTests1.fs" />
     <Compile Include="SimpleCollectionsTests.fs" />
+    <Compile Include="SimpleHashMapTests1.fs" />
+    <Compile Include="SimpleHashMapTests2.fs" />
     <Compile Include="Main.fs" />
   </ItemGroup>
 
