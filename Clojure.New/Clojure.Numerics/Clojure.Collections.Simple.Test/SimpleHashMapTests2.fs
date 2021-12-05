@@ -812,8 +812,9 @@ let collisionTests2 =
               testCollisions2 100 10
               testCollisions2 1000 100
               testCollisions2 10000 100
-              testCollisions2 100000 100
-              testCollisions2 1000000 3000 ]
+              //testCollisions2 100000 100
+              //testCollisions2 1000000 3000 
+        ]
 
 
 
@@ -850,7 +851,7 @@ let doBigTest2 (numEntries: int) =
 [<Tests>]
 let bigPersistentHashMapTests2 =
     testList
-        "big insertions into PersistentHashMap"
+        "big insertions into SimpleHashMap2"
         [
 
           testCase "test for 100" <| fun _ -> doBigTest2 100
@@ -885,29 +886,29 @@ let bigPersistentHashMapTests2 =
           testCase "test for 10000"
           <| fun _ -> doBigTest2 10000
 
-          testCase "test for 20000"
-          <| fun _ -> doBigTest2 20000
+          //testCase "test for 20000"
+          //<| fun _ -> doBigTest2 20000
 
-          testCase "test for 30000"
-          <| fun _ -> doBigTest2 30000
+          //testCase "test for 30000"
+          //<| fun _ -> doBigTest2 30000
 
-          testCase "test for 40000"
-          <| fun _ -> doBigTest2 40000
+          //testCase "test for 40000"
+          //<| fun _ -> doBigTest2 40000
 
-          testCase "test for 50000"
-          <| fun _ -> doBigTest2 50000
+          //testCase "test for 50000"
+          //<| fun _ -> doBigTest2 50000
 
-          testCase "test for 60000"
-          <| fun _ -> doBigTest2 60000
+          //testCase "test for 60000"
+          //<| fun _ -> doBigTest2 60000
 
-          testCase "test for 70000"
-          <| fun _ -> doBigTest2 70000
+          //testCase "test for 70000"
+          //<| fun _ -> doBigTest2 70000
 
-          testCase "test for 80000"
-          <| fun _ -> doBigTest2 80000
+          //testCase "test for 80000"
+          //<| fun _ -> doBigTest2 80000
 
-          testCase "test for 90000"
-          <| fun _ -> doBigTest2 90000
+          //testCase "test for 90000"
+          //<| fun _ -> doBigTest2 90000
 
 
           //testCase "test for 100000" <| fun _ ->
