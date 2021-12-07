@@ -9,14 +9,13 @@
   <ItemGroup>
     <Compile Include="SimpleCollectionsTests.fs" />
     <Compile Include="SimpleHashMapTests1.fs" />
-    <Compile Include="SimpleHashMapTests2.fs" />
     <Compile Include="Main.fs" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Expecto" Version="9.0.4" />
     <PackageReference Include="YoloDev.Expecto.TestSdk" Version="0.12.13" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.1.0-preview-20211109-03" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.1.0-preview-20211130-02" />
     <ProjectReference Include="..\Clojure.Collections.Simple\Clojure.Collections.Simple.fsproj" />
     <ProjectReference Include="..\Clojure.Collections\Clojure.Collections.fsproj" />
   </ItemGroup>

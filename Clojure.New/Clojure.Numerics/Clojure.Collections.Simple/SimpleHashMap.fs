@@ -78,7 +78,7 @@ type BNodeEntry =
     | KeyValue of Key: obj * Value: obj
     | Node of Node: SHMNode
 
-and SHMNode =
+and [<ReferenceEquality>] SHMNode =
     | ArrayNode of Count: int * Nodes: (SHMNode option) []
     | BitmapNode of Bitmap: int * Entries: BNodeEntry []
     | CollisionNode of Hash: int * Count: int * KVs: MapEntry []
