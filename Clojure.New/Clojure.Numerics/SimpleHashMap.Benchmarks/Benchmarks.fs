@@ -30,6 +30,12 @@ type Benchmarks () =
         let mutable m = SimpleHashMap.Empty  :> IPersistentMap
         for key in this.dict.Keys do
             m <- m.assoc(key,key)
+
+    [<Benchmark>]
+    member this.MakeSHM2ByAssoc() = 
+        let mutable m = SimpleHashMap2.Empty  :> IPersistentMap
+        for key in this.dict.Keys do
+            m <- m.assoc(key,key)
     
     [<Benchmark(Baseline=true)>]
     member this.MakePHMByAssoc() = 
