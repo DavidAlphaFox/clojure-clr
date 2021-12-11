@@ -1,4 +1,4 @@
-﻿module SimpleHashMapTests1
+﻿module SimpleHashMap1Tests
 
 // TODO:  many of tese tests are identical to those in PersistentHashMapTests.
 // Figure out how to consolidate.
@@ -813,7 +813,7 @@ let testCollisions (numEntries: int) (numHashCodes: int) : unit =
 
 
 [<Tests>]
-let collisionTests =
+let simpleHashMapCollisionTests =
     testList
         "SimpleHashMap collision tests"
         [ testCase "Collisions n m"
@@ -858,7 +858,7 @@ let doBigTest (numEntries: int) =
         s <- s.next ()
 
 [<Tests>]
-let bigPersistentHashMapTests =
+let bigSimpleHashMapTests =
     testList
         "big insertions into SimpleHashMap"
         [

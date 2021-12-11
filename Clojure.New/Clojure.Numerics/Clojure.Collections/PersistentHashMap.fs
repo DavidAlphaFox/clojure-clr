@@ -375,20 +375,6 @@ type PersistentHashMap(meta: IPersistentMap, count: int, root: INode, hasNull: b
     interface IEditableCollection with
         member this.asTransient() = upcast TransientHashMap(this)
 
-    interface ITransientCollection with
-        member _.conj(o) = raise <| NotImplementedException()
-        member _.persistent() = raise <| NotImplementedException()
-
-    interface ITransientAssociative with
-        member _.assoc(k, v) = raise <| NotImplementedException()
-
-    interface ITransientMap with
-        member _.assoc(k, v) = raise <| NotImplementedException()
-        member _.without(k) = raise <| NotImplementedException()
-        member _.persistent() = raise <| NotImplementedException()
-
-
-
     static member emptyEnumerator() = Seq.empty.GetEnumerator()
 
     static member nullEnumerator(d: KVMangleFn<obj>, nullValue: obj, root: IEnumerator) =

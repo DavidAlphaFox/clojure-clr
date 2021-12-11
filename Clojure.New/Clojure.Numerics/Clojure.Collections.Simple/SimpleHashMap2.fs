@@ -466,13 +466,13 @@ and CollisionNode2Seq(kvs: MapEntry [], idx: int) =
         member _.next() = CollisionNode2Seq.create (kvs, idx + 1)
 
 
-type NotFoundSentinel = | NFS
+type NotFoundSentinel2 = | NFS2
 
 type SimpleHashMap2 =
     | Empty
     | Rooted of Count: int * Node: SHMNode2
 
-    static member notFoundValue = NFS
+    static member notFoundValue = NFS2
 
     interface Counted with
         member this.count() =
