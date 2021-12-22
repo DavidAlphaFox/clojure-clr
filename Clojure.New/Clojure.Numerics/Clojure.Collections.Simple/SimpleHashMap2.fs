@@ -62,6 +62,7 @@ module private SHMNodeOps2 =
 
 open SHMNodeOps2
 open System.Reflection
+open System.Threading
 
 // pick these up from original SimpleHashMap
 
@@ -81,11 +82,11 @@ type BNodeEntry2 =
     | Node of Node: SHMNode2
 
 and [<ReferenceEquality>] SHMNode2 =
-    | ArrayNode2 of Count: int ref * Nodes: (SHMNode2 option) []
-    | BitmapNode2 of Bitmap: int ref * Entries: BNodeEntry2 [] ref
-    | CollisionNode2 of Hash: int * Count: int ref * KVs: MapEntry [] ref
+    | ArrayNode2 of Edit : AtomicReference<Thread> * Count: int ref * Nodes: (SHMNode2 option) []
+    | BitmapNode2 of Edit : AtomicReference<Thread> * Bitmap: int ref * Entries: BNodeEntry2 [] ref
+    | CollisionNode2 of Edit : AtomicReference<Thread> * Hash: int * Count: int ref * KVs: MapEntry [] ref
 
-    static member EmptyBitmapNode = BitmapNode2(ref 0, ref Array.empty<BNodeEntry2>)
+    static member EmptyBitmapNode = BitmapNode2(null, ref 0, ref Array.empty<BNodeEntry2>)
 
     static member tryFindCNodeIndex(key: obj, kvs: MapEntry []) =
         kvs
@@ -96,6 +97,7 @@ and [<ReferenceEquality>] SHMNode2 =
 
         if key1hash = key2hash then
             CollisionNode2(
+                null,
                 key1hash,
                 ref 2,
                 ref [| MapEntry(key1, val1)
@@ -172,7 +174,7 @@ and [<ReferenceEquality>] SHMNode2 =
                 let newNode =
                     SHMNode2.EmptyBitmapNode.assoc (shift + 5) hash key value addedLeaf
 
-                ArrayNode2(ref (count.Value + 1), cloneAndSet (nodes, idx, Some newNode))
+                ArrayNode2(null, ref (count.Value + 1), cloneAndSet (nodes, idx, Some newNode))
             | Some node ->
                 let newNode =
                     node.assoc (shift + 5) hash key value addedLeaf
@@ -180,7 +182,7 @@ and [<ReferenceEquality>] SHMNode2 =
                 if newNode = node then
                     this
                 else
-                    ArrayNode2(count, cloneAndSet (nodes, idx, Some newNode))
+                    ArrayNode2(null, ref count.Value, cloneAndSet (nodes, idx, Some newNode))
 
         | BitmapNode2 (Bitmap = bitmap; Entries = entries) ->
             match hashToIndex hash shift bitmap.Value with
@@ -208,7 +210,7 @@ and [<ReferenceEquality>] SHMNode2 =
 
                             j <- j + 1
 
-                    ArrayNode2(ref (n + 1), nodes)
+                    ArrayNode2(null, ref (n + 1), nodes)
 
                 else
                     let bit = bitPos (hash, shift)
@@ -218,7 +220,7 @@ and [<ReferenceEquality>] SHMNode2 =
                     newArray.[idx] <- KeyValue(key, value)
                     Array.Copy(entries.Value, idx, newArray, idx + 1, n - idx)
                     addedLeaf.set ()
-                    BitmapNode2(ref (bitmap.Value ||| bit), ref newArray)
+                    BitmapNode2(null, ref (bitmap.Value ||| bit), ref newArray)
 
             | Some idx ->
                 let entry = entries.Value.[idx]
@@ -229,14 +231,14 @@ and [<ReferenceEquality>] SHMNode2 =
                         if value = v then
                             this
                         else
-                            BitmapNode2(ref bitmap.Value, ref (cloneAndSet (entries.Value, idx, KeyValue(key, value))))
+                            BitmapNode2(null, ref bitmap.Value, ref (cloneAndSet (entries.Value, idx, KeyValue(key, value))))
                     else
                         addedLeaf.set ()
 
                         let newNode =
                             SHMNode2.createNode (shift + 5) k v hash key value
 
-                        BitmapNode2(ref bitmap.Value, ref (cloneAndSet (entries.Value, idx, Node(newNode))))
+                        BitmapNode2(null, ref bitmap.Value, ref (cloneAndSet (entries.Value, idx, Node(newNode))))
                 | Node (Node = node) ->
                     let newNode =
                         node.assoc (shift + 5) hash key value addedLeaf
@@ -244,7 +246,7 @@ and [<ReferenceEquality>] SHMNode2 =
                     if newNode = node then
                         this
                     else
-                        BitmapNode2(ref bitmap.Value, ref (cloneAndSet (entries.Value, idx, Node(newNode))))
+                        BitmapNode2(null, ref bitmap.Value, ref (cloneAndSet (entries.Value, idx, Node(newNode))))
 
         | CollisionNode2 (Hash = h; Count = count; KVs = kvs) ->
             if hash = h then
@@ -255,15 +257,16 @@ and [<ReferenceEquality>] SHMNode2 =
                     if kv.value () = value then
                         this
                     else
-                        CollisionNode2(hash, ref count.Value, ref (cloneAndSet (kvs.Value, idx, MapEntry(key, value))))
+                        CollisionNode2(null, hash, ref count.Value, ref (cloneAndSet (kvs.Value, idx, MapEntry(key, value))))
                 | None ->
                     let newArray: MapEntry [] = count.Value + 1 |> Array.zeroCreate
                     Array.Copy(kvs.Value, 0, newArray, 0, count.Value)
                     newArray.[count.Value] <- MapEntry(key, value)
                     addedLeaf.set ()
-                    CollisionNode2(hash, ref (count.Value + 1), ref newArray)
+                    CollisionNode2(null, hash, ref (count.Value + 1), ref newArray)
             else
                 BitmapNode2(
+                    null,
                     ref (bitPos (hash, shift)),
                     ref [| Node(this) |]
                 )
@@ -296,7 +299,7 @@ and [<ReferenceEquality>] SHMNode2 =
                 bitmap <- bitmap ||| 1 <<< i
                 j <- j + 1
 
-        BitmapNode2(ref bitmap, ref newArray)
+        BitmapNode2(null, ref bitmap, ref newArray)
 
 
     member this.without (shift: int) (hash: int) (key: obj) : SHMNode2 option =
@@ -312,13 +315,13 @@ and [<ReferenceEquality>] SHMNode2 =
                     if count.Value <= 8 then
                         SHMNode2.pack count.Value nodes idx |> Some // shrink
                     else
-                        ArrayNode2(ref (count.Value - 1), cloneAndSet (nodes, idx, None))
+                        ArrayNode2(null, ref (count.Value - 1), cloneAndSet (nodes, idx, None))
                         |> Some // zero out this entry
                 | Some newNode ->
                     if newNode = node then
                         this |> Some
                     else
-                        ArrayNode2(ref (count.Value - 1), cloneAndSet (nodes, idx, Some newNode))
+                        ArrayNode2(null, ref (count.Value - 1), cloneAndSet (nodes, idx, Some newNode))
                         |> Some
 
         | BitmapNode2 (Bitmap = bitmap; Entries = entries) ->
@@ -335,7 +338,7 @@ and [<ReferenceEquality>] SHMNode2 =
                         if bitmap.Value = bit then // only one entry
                             None
                         else
-                            BitmapNode2( ref (bitmap.Value ^^^ bit), ref (removeEntry (entries.Value, idx)))
+                            BitmapNode2(null, ref (bitmap.Value ^^^ bit), ref (removeEntry (entries.Value, idx)))
                             |> Some
                     else
                         this |> Some
@@ -346,7 +349,7 @@ and [<ReferenceEquality>] SHMNode2 =
                         if n = node then
                             this |> Some
                         else
-                            BitmapNode2(ref bitmap.Value, ref (cloneAndSet (entries.Value, idx, Node(n))))
+                            BitmapNode2(null, ref bitmap.Value, ref (cloneAndSet (entries.Value, idx, Node(n))))
                             |> Some
 
         | CollisionNode2 (Hash = h; Count = count; KVs = kvs) ->
@@ -356,8 +359,185 @@ and [<ReferenceEquality>] SHMNode2 =
                 if count.Value = 1 then
                     None
                 else
-                    CollisionNode2(h, ref (count.Value - 1), ref (removeEntry (kvs.Value, idx)))
+                    CollisionNode2(null, h, ref (count.Value - 1), ref (removeEntry (kvs.Value, idx)))
                     |> Some
+
+    static member modifyOrCreateANode (thisNode: SHMNode2) (currEdit: AtomicReference<Thread>) (currNodes: SHMNode2 option[]) (refCurrCount: ref int) (newEdit: AtomicReference<Thread>) (idx:int) (newNode: SHMNode2) : SHMNode2 =
+        if currEdit = newEdit then  
+            // Current node is editable -- modify in-place
+            currNodes.[idx] <- Some newNode
+            refCurrCount := refCurrCount.Value+1
+            thisNode
+        else
+            // create new editable node with correct data
+             let newNodes = currNodes.Clone() :?> SHMNode2 option[]
+             newNodes.[idx] <- Some newNode
+             ArrayNode2(newEdit,ref (refCurrCount.Value+1), newNodes)          
+
+
+    member this.ensureEditable(e) =
+        match this with
+        | ArrayNode2 (Edit = edit; Count = count; Nodes = nodes) ->
+            if edit = e then
+                this
+            else
+                ArrayNode2 (e, count, (nodes.Clone() :?> SHMNode2 option[]))
+        | BitmapNode2 (Edit = edit; Bitmap = bitmap; Entries = entries) ->
+            if edit = e then   
+                this
+            else
+                let n = bitCount (bitmap.Value)
+
+                let newArray : BNodeEntry2[] =
+                    Array.zeroCreate (if n >= 0 then n+1 else 2) // ?? Why not 1?
+                Array.Copy(entries.Value,newArray,n)
+                BitmapNode2(e, ref bitmap.Value, ref newArray)
+        | CollisionNode2 (Edit = edit; Hash = h; Count = count; KVs = kvs) ->
+            if edit = e then   
+                this
+            else
+                let newArray : MapEntry [] = (count.Value + 1) |> Array.zeroCreate
+                Array.Copy(kvs.Value, 0, newArray, 0, count.Value)
+                CollisionNode2(e,h,ref count.Value, ref newArray)
+
+
+    member this.setBNodeEntryToNode (idx:int) (newNode: SHMNode2) : unit =
+        match this with
+        | BitmapNode2(Entries=entries) -> entries.Value.[idx] <- Node newNode
+
+    member this.editAndSetBNodeNode (e: AtomicReference<Thread>) (idx:int) (newNode:SHMNode2) : SHMNode2 =
+        let editable = this.ensureEditable e
+        editable.setBNodeEntryToNode idx newNode
+        editable
+
+    member this.setBNodeData (newEntries: BNodeEntry2[]) (newBitmap:int) : unit =
+        match this with
+        | BitmapNode2(Bitmap=bitmap;Entries = entries) ->
+            bitmap := newBitmap
+            entries := newEntries
+        | _ -> ()
+
+    member this.incrementCount() : unit =
+        match this with
+        | ArrayNode2(Count = count) -> count := count.Value+1
+        | CollisionNode2(Count = count) -> count := count.Value+1
+        | _ -> ()
+
+    
+    member this.assocTransient (e: AtomicReference<Thread>) (shift: int) (hash: int) (key: obj) (value: obj) (addedLeaf: Box) : SHMNode2 =
+         match this with
+         | ArrayNode2 (Edit = edit; Count = count; Nodes = nodes) ->
+             let idx = mask (hash, shift)
+
+             match nodes.[idx] with
+             | None ->
+                 let newNode =
+                     SHMNode2.EmptyBitmapNode.assocTransient e (shift + 5) hash key value addedLeaf
+                 SHMNode2.modifyOrCreateANode this edit nodes count e idx newNode
+ 
+             | Some node ->
+                 let newNode =
+                     node.assocTransient e (shift + 5) hash key value addedLeaf
+
+                 if newNode = node then
+                     this
+                 else
+                      SHMNode2.modifyOrCreateANode this edit nodes count e idx newNode 
+
+         | BitmapNode2 (Bitmap = bitmap; Entries = entries) ->
+             match hashToIndex hash shift bitmap.Value with
+             | None ->
+                 let n = bitCount (bitmap.Value)
+
+                 if n >= 16 then
+                     let nodes: SHMNode2 option [] = Array.zeroCreate 32
+                     let jdx = mask (hash, shift)
+
+                     nodes.[jdx] <-
+                         SHMNode2.EmptyBitmapNode.assocTransient e (shift + 5) hash key value addedLeaf
+                         |> Some
+
+                     let mutable j = 0
+
+                     for i = 0 to 31 do
+                         if ((bitmap.Value >>> i) &&& 1) <> 0 then
+                             nodes.[i] <-
+                                 match entries.Value.[j] with
+                                 | KeyValue (Key = k; Value = v) ->
+                                     SHMNode2.EmptyBitmapNode.assocTransient e (shift + 5) (getHash k) k v addedLeaf
+                                     |> Some
+                                 | Node (Node = node) -> node |> Some
+
+                             j <- j + 1
+
+                     ArrayNode2(e, ref (n + 1), nodes)
+
+                 else
+                     let bit = bitPos (hash, shift)
+                     let idx = bitIndex (bitmap.Value, bit)
+                     let newArray: BNodeEntry2 [] = Array.zeroCreate (n + 1)
+                     Array.Copy(entries.Value, 0, newArray, 0, idx)
+                     newArray.[idx] <- KeyValue(key, value)
+                     Array.Copy(entries.Value, idx, newArray, idx + 1, n - idx)
+                     addedLeaf.set ()
+                     let editable = this.ensureEditable e
+                     this.setBNodeData newArray (bitmap.Value ||| bit)
+                     this
+
+             | Some idx ->
+                 let entry = entries.Value.[idx]
+
+                 match entry with
+                 | KeyValue (Key = k; Value = v) ->
+                     if equiv (key, k) then
+                         if value = v then
+                             this
+                         else
+                             BitmapNode2(null, ref bitmap.Value, ref (cloneAndSet (entries.Value, idx, KeyValue(key, value))))
+                     else
+                         addedLeaf.set ()
+
+                         let newNode =
+                             SHMNode2.createNode (shift + 5) k v hash key value
+
+                         BitmapNode2(null, ref bitmap.Value, ref (cloneAndSet (entries.Value, idx, Node(newNode))))
+                 | Node (Node = node) ->
+                     let newNode =
+                         node.assoc (shift + 5) hash key value addedLeaf
+
+                     if newNode = node then
+                         this
+                     else
+                         BitmapNode2(null, ref bitmap.Value, ref (cloneAndSet (entries.Value, idx, Node(newNode))))
+
+         | CollisionNode2 (Hash = h; Count = count; KVs = kvs) ->
+             if hash = h then
+                 match SHMNode2.tryFindCNodeIndex (key, kvs.Value) with
+                 | Some idx ->
+                     let kv = kvs.Value.[idx] :> IMapEntry
+
+                     if kv.value () = value then
+                         this
+                     else
+                         CollisionNode2(null, hash, ref count.Value, ref (cloneAndSet (kvs.Value, idx, MapEntry(key, value))))
+                 | None ->
+                     let newArray: MapEntry [] = count.Value + 1 |> Array.zeroCreate
+                     Array.Copy(kvs.Value, 0, newArray, 0, count.Value)
+                     newArray.[count.Value] <- MapEntry(key, value)
+                     addedLeaf.set ()
+                     CollisionNode2(null, hash, ref (count.Value + 1), ref newArray)
+             else
+                 BitmapNode2(
+                     null, 
+                     ref (bitPos (hash, shift)),
+                     ref [| Node(this) |]
+                 )
+                     .assoc
+                     shift
+                     h
+                     key
+                     value
+                     addedLeaf
 
 
     member this.iteratorT(d: KVTranformFn<'T>) : IEnumerator<'T> =
@@ -678,3 +858,41 @@ type SimpleHashMap2 =
             ret <- ret.assoc (key, value)
 
         ret
+
+and private TransientSimpleHashMap(e, r, c) =
+    inherit ATransientMap()
+
+    [<NonSerialized>]
+    let edit: AtomicReference<Thread> = e
+
+    [<VolatileField>]
+    let mutable root: SHMNode2 option = r
+
+    [<VolatileField>]
+    let mutable count: int = c
+
+    let leafFlag = Box()
+
+    new(m: SimpleHashMap2) =
+        match m with
+        | Empty -> TransientSimpleHashMap(AtomicReference(Thread.CurrentThread), None, 0)
+        | Rooted(Count=c;Node=n) -> TransientSimpleHashMap(AtomicReference(Thread.CurrentThread), Some n, c)
+
+    override this.doAssoc(k,v) =
+        leafFlag.reset()
+
+        let n = 
+            (match root with
+            | None -> SHMNode2.EmptyBitmapNode
+            | Some n -> n)
+                .assocTransient edit 0 (hash(k)) k v leafFlag
+        
+        if n <> root then root <- Some n
+
+        if leafFlag.isSet then 
+            count <- count+1
+
+        upcast this
+
+
+
