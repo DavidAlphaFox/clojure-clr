@@ -9,6 +9,7 @@
     <Compile Include="SimplestCollections.fs" />
     <Compile Include="SimpleHashMap.fs" />
     <Compile Include="SimpleHashMap2.fs" />
+    <Compile Include="SimpleHashMap3.fs" />
   </ItemGroup>
 
   <ItemGroup>
