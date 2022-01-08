@@ -47,5 +47,9 @@ type Benchmarks () =
     member this.MakePHMByTransient() = 
         PersistentHashMap.create(this.dict) |> ignore
 
+    [<Benchmark>]
+    member this.MakeSHM2MByTransient() = 
+        SimpleHashMap2.create(this.dict) |> ignore
+
 
 
