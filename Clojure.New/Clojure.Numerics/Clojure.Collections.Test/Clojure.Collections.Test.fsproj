@@ -20,13 +20,13 @@
 
   <ItemGroup>
     <PackageReference Include="Expecto" Version="9.*" />
-    <PackageReference Include="YoloDev.Expecto.TestSdk" Version="0.12.13" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.1.0-preview-20211130-02" />
+    <PackageReference Include="YoloDev.Expecto.TestSdk" Version="0.12.20" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.2.0-preview-20220401-08" />
     <ProjectReference Include="..\Clojure.Collections.Simple\Clojure.Collections.Simple.fsproj" />
     <ProjectReference Include="..\Clojure.Collections\Clojure.Collections.fsproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Update="FSharp.Core" Version="6.0.1" />
+    <PackageReference Update="FSharp.Core" Version="6.0.4-beta.22181.2" />
   </ItemGroup>
 
 </Project>
