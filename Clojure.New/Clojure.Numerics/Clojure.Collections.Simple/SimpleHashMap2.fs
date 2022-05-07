@@ -441,7 +441,7 @@ and [<ReferenceEquality>] SHMNode2 =
         match this with
         | ArrayNode2 (Edit = edit; Count = count; Nodes = nodes) ->
  
- let idx = mask (hash, shift)
+            let idx = mask (hash, shift)
 
             match nodes.[idx] with
             | None ->

@@ -100,6 +100,25 @@ type SimpleHashMap3 =
 
     static member notFoundValue = NFS3
 
+    static member createNode (shift: int) (key1: obj) (val1: obj) (key2hash: int) (key2: obj) (val2: obj) : INode3 =
+        let key1hash = hash (key1)
+
+        if key1hash = key2hash then
+            CollisionNode3(
+                null,
+                key1hash,
+                2,
+                [| MapEntry(key1, val1)
+                   MapEntry(key2, val2) |]
+            )
+        else
+            let box = Box()
+
+            let n1 =
+                (BitmapNode3.Empty :> INode3).assoc shift key1hash key1 val1 box
+
+            n1.assoc shift key2hash key2 val2 box
+
     interface Counted with
         member this.count() =
             match this with
@@ -534,9 +553,34 @@ and [<Sealed>] ArrayNode3(e,c,a) =
                                     editable :> INode3 |> Some
                                     
         
-        member this.getNodeSeq() = NotImplementedException() |> raise     
-        member this.iterator d  = raise <| NotImplementedException()
-        member this.iteratorT d = raise <| NotImplementedException()
+        member this.getNodeSeq() = ArrayNode3Seq.create(nodes,0)    
+        member this.iterator d  = 
+            let s =
+                seq {
+                    for onode in nodes do
+                        match onode with
+                        | None -> ()
+                        | Some node ->
+                            let ie = node.iteratorT (d)
+
+                            while ie.MoveNext() do
+                                yield ie.Current
+                }
+            s.GetEnumerator()
+
+        member this.iteratorT d = 
+            let s =
+                seq {
+                    for onode in nodes do
+                        match onode with
+                        | None -> ()
+                        | Some node ->
+                            let ie = node.iteratorT (d)
+
+                            while ie.MoveNext() do
+                                yield ie.Current
+                }
+            s.GetEnumerator()
 
 and BNodeEntry3 =
     | KeyValue of Key: obj * Value: obj
@@ -553,10 +597,129 @@ and [<Sealed>] internal BitmapNode3(e, b, a) =
 
     static member Empty: BitmapNode3 = BitmapNode3(null, 0, Array.empty<BNodeEntry3>)
 
+    member this.modifyOrCreateBNode
+        (newEdit: AtomicReference<Thread>)
+        (newBitmap: int)
+        (newEntries: BNodeEntry3 [])
+        =
+        if edit = newEdit then
+            // Current node is editable -- modify in-place
+            bitmap <- newBitmap
+            entries <- newEntries
+            this
+        else
+            // create new editable node with correct data
+            BitmapNode3(newEdit, newBitmap, newEntries)
+
+
     interface INode3 with
 
-        member this.assoc shift hash key value addedLeaf = raise <| NotImplementedException()
-        member this.without shift hash key  = raise <| NotImplementedException()
+        member this.assoc shift hash key value addedLeaf =
+            match hashToIndex hash shift bitmap with
+            | None ->
+                let n = bitCount (bitmap)
+
+                if n >= 16 then
+                    let nodes: INode3 option [] = Array.zeroCreate 32
+                    let jdx = mask (hash, shift)
+
+                    nodes.[jdx] <-
+                        (BitmapNode3.Empty :> INode3).assoc (shift + 5) hash key value addedLeaf
+                        |> Some
+
+                    let mutable j = 0
+
+                    for i = 0 to 31 do
+                        if ((bitmap >>> i) &&& 1) <> 0 then
+                            nodes.[i] <-
+                                match entries.[j] with
+                                | KeyValue (Key = k; Value = v) ->
+                                    (BitmapNode3.Empty :> INode3).assoc (shift + 5) (getHash k) k v addedLeaf
+                                    |> Some
+                                | Node (Node = node) -> node |> Some
+                                | EmptyEntry ->
+                                    InvalidOperationException("Found Empty cell in BitmapNode2 -- algorithm bug")
+                                    |> raise
+
+                            j <- j + 1
+
+                    ArrayNode3(null, n + 1, nodes)
+
+                else
+                    let bit = bitPos (hash, shift)
+                    let idx = bitIndex (bitmap, bit)
+                    let newArray: BNodeEntry3 [] = Array.zeroCreate (n + 1)
+                    Array.Copy(entries, 0, newArray, 0, idx)
+                    newArray.[idx] <- KeyValue(key, value)
+                    Array.Copy(entries, idx, newArray, idx + 1, n - idx)
+                    addedLeaf.set ()
+                    BitmapNode3(null, bitmap ||| bit, newArray)
+
+            | Some idx ->
+                let entry = entries.[idx]
+
+                match entry with
+                | KeyValue (Key = k; Value = v) ->
+                    if equiv (key, k) then
+                        if value = v then
+                            this
+                        else
+                            BitmapNode3(
+                                null,
+                                bitmap,
+                                cloneAndSet (entries, idx, KeyValue(key, value))
+                            )
+                    else
+                        addedLeaf.set ()
+
+                        let newNode =
+                            SimpleHashMap3.createNode (shift + 5) k v hash key value
+
+                        BitmapNode3(null, bitmap, cloneAndSet (entries, idx, Node(newNode)))
+                | Node (Node = node) ->
+                    let newNode =
+                        node.assoc (shift + 5) hash key value addedLeaf
+
+                    if newNode = node then
+                        this
+                    else
+                        BitmapNode3(null, bitmap, cloneAndSet (entries, idx, Node(newNode)))
+                | EmptyEntry ->
+                    InvalidOperationException("Found Empty cell in BitmapNode2 -- algorithm bug")
+                    |> raise
+
+
+        member this.without shift hash key  = 
+            match hashToIndex hash shift bitmap with
+            | None -> this :> INode3 |> Some
+            | Some idx ->
+                let entry = entries.[idx]
+
+                match entry with
+                | KeyValue (Key = k; Value = v) ->
+                    if equiv (k, key) then
+                        let bit = bitPos (hash, shift)
+
+                        if bitmap = bit then // only one entry
+                            None
+                        else
+                            BitmapNode3(null, bitmap ^^^ bit, removeEntry (entries, idx))
+                             :> INode3 |> Some
+                    else
+                        this :> INode3 |> Some
+                | Node (Node = node) ->
+                    match node.without (shift + 5) hash key with
+                    | None -> this  :> INode3 |> Some
+                    | Some n ->
+                        if n = node then
+                            this :> INode3|> Some
+                        else
+                            BitmapNode3(null, bitmap, cloneAndSet (entries, idx, Node(n)))
+                            :> INode3|> Some
+                | EmptyEntry ->
+                    InvalidOperationException("Found Empty cell in BitmapNode3 -- algorithm bug")
+                    |> raise
+
         member this.find shift hash key = 
             match hashToIndex hash shift bitmap with
             | None -> None
@@ -571,6 +734,7 @@ and [<Sealed>] internal BitmapNode3(e, b, a) =
                 | EmptyEntry ->
                     InvalidOperationException("Found Empty cell in BitmapNode3 -- algorithm bug")
                     |> raise 
+        
         member this.find2 shift hash key notFound = 
             match hashToIndex hash shift bitmap with
             | None -> notFound
@@ -582,746 +746,412 @@ and [<Sealed>] internal BitmapNode3(e, b, a) =
                     InvalidOperationException("Found Empty cell in BitmapNode2 -- algorithm bug")
                     |> raise
 
-        member this.getNodeSeq ()  = raise <| NotImplementedException()
-        member this.assocTransient e shift hash key value addedLeaf = raise <| NotImplementedException()
-        member this.withoutTransient e shift hash key removedLeaf = raise <| NotImplementedException()
-        member this.iterator d  = raise <| NotImplementedException()
-        member this.iteratorT d = raise <| NotImplementedException()
+        member this.getNodeSeq ()  = BitmapNode3Seq.create (entries, 0)
+
+        member this.assocTransient e shift hash key value addedLeaf = 
+            match hashToIndex hash shift bitmap with
+            | None ->
+                let n = bitCount (bitmap)
+
+                if edit = e && n < entries.Length then
+                    // we have space in the array and we are already editing this node transiently so we can just move things around here.
+                    // If we have space in the array but we are not already editing this node, then the space is not helpful -- we just fall through to the subsequent cases
+                    addedLeaf.set ()
+                    let bit = bitPos (hash, shift)
+                    let idx = bitIndex (bitmap, bit)
+                    let array = entries
+                    Array.Copy(array, idx, array, idx + 1, n - idx)
+                    array.[idx] <- KeyValue(key, value)
+                    bitmap <- bitmap ||| idx
+                    this
+
+                elif n >= 16 then
+                    let nodes: INode3 option [] = Array.zeroCreate 32
+                    let jdx = mask (hash, shift)
+
+                    nodes.[jdx] <-
+                        (BitmapNode3.Empty :> INode3).assocTransient e (shift + 5) hash key value addedLeaf
+                        |> Some
+
+                    let mutable j = 0
+
+                    for i = 0 to 31 do
+                        if ((bitmap >>> i) &&& 1) <> 0 then
+                            nodes.[i] <-
+                                match entries.[j] with
+                                | KeyValue (Key = k; Value = v) ->
+                                    (BitmapNode3.Empty :> INode3).assocTransient e (shift + 5) (getHash k) k v addedLeaf
+                                    |> Some
+                                | Node (Node = node) -> node |> Some
+                                | EmptyEntry ->
+                                    InvalidOperationException("Found Empty cell in BitmapNode3 -- algorithm bug")
+                                    |> raise
+
+                            j <- j + 1
+
+                    ArrayNode3(e, n + 1, nodes)
+
+                else
+                    let bit = bitPos (hash, shift)
+                    let idx = bitIndex (bitmap, bit)
+                    let newArray: BNodeEntry3 [] = Array.zeroCreate (n + 1)
+                    Array.Copy(entries, 0, newArray, 0, idx)
+                    newArray.[idx] <- KeyValue(key, value)
+                    Array.Copy(entries, idx, newArray, idx + 1, n - idx)
+                    addedLeaf.set ()
+                    this.modifyOrCreateBNode e (bitmap ||| bit) newArray
+
+            | Some idx ->
+                let entry = entries.[idx]
+
+                match entry with
+                | KeyValue (Key = k; Value = v) ->
+                    if equiv (key, k) then
+                        if value = v then
+                            this
+                        else
+                            BitmapNode3(
+                                null,
+                                bitmap,
+                                cloneAndSet (entries, idx, KeyValue(key, value))
+                            )
+                    else
+                        addedLeaf.set ()
+
+                        let newNode =
+                            SimpleHashMap3.createNode (shift + 5) k v hash key value
+
+                        BitmapNode3(null, bitmap, cloneAndSet (entries, idx, Node(newNode)))
+                | Node (Node = node) ->
+                    let newNode =
+                        node.assoc (shift + 5) hash key value addedLeaf
+
+                    if newNode = node then
+                        this
+                    else
+                        BitmapNode3(null, bitmap, cloneAndSet (entries, idx, Node(newNode)))
+                | EmptyEntry ->
+                    InvalidOperationException("Found Empty cell in BitmapNode3 -- algorithm bug")
+                    |> raise
+
+        member this.withoutTransient e shift hash key removedLeaf = 
+            match hashToIndex hash shift bitmap with
+            | None -> Some (upcast this) 
+            | Some idx ->
+                let entry = entries.[idx]
+
+                match entry with
+                | KeyValue (Key = k; Value = v) ->
+                    if equiv (k, key) then
+                        let bit = bitPos (hash, shift)
+
+                        if bitmap = bit then // only one entry
+                            None
+                        elif edit = e then
+                            // we are editable, edit in place
+                            bitmap <- bitmap ^^^ bit
+                            entries.[idx] <- EmptyEntry
+                            (this :> INode3) |> Some
+                        else
+                            BitmapNode3(e, bitmap ^^^ bit, removeEntry (entries, idx))
+                            :> INode3 |> Some
+                    else
+                        this :> INode3 |> Some
+                | Node (Node = node) ->
+                    match node.withoutTransient e (shift + 5) hash key removedLeaf with
+                    | None -> this :> INode3 |> Some
+                    | Some n ->
+                        if n = node then
+                            this :> INode3 |> Some
+                        else
+                            BitmapNode3(null, bitmap, cloneAndSet (entries, idx, Node(n)))
+                            :> INode3 |> Some
+                | EmptyEntry ->
+                    InvalidOperationException("Found Empty cell in BitmapNode3 -- algorithm bug")
+                    |> raise
+
+        member this.iterator d  = 
+            let s =
+                seq {
+                    for entry in entries do
+                        match entry with
+                        | KeyValue (Key = k; Value = v) -> yield d (k, v)
+                        | Node (Node = node) ->
+                            let ie = node.iterator (d)
+
+                            while ie.MoveNext() do
+                                yield ie.Current
+                        | EmptyEntry -> ()
+
+                }
+            s.GetEnumerator()
         
+        member this.iteratorT d = 
+            let s =
+                seq {
+                    for entry in entries do
+                        match entry with
+                        | KeyValue (Key = k; Value = v) -> yield d (k, v)
+                        | Node (Node = node) ->
+                            let ie = node.iteratorT (d)
 
-and [<Sealed>] internal CollisionNode3(edit: AtomicReference<Thread>, hash: int, c, a) =
+                            while ie.MoveNext() do
+                                yield ie.Current
+                        | EmptyEntry -> ()
 
+                }
+            s.GetEnumerator()
+
+
+
+and [<Sealed>] internal CollisionNode3(e: AtomicReference<Thread>, h: int, c: int, a: MapEntry[]) =
+
+    let edit: AtomicReference<Thread> = e
     let mutable count: int = c
-    let mutable array: obj [] = a
+    let mutable kvs: MapEntry [] = a
+    let nodeHash : int = h
+
+    member this.tryFindNodeIndex key =
+        kvs
+        |> Array.tryFindIndex
+            (fun kv ->
+                (not (isNull kv))
+                && equiv ((kv :> IMapEntry).key (), key))
 
     interface INode3 with
 
-        member this.assoc shift hash key value addedLeaf = raise <| NotImplementedException()
-        member this.without shift hash key  = raise <| NotImplementedException()
-        member this.find shift hash key = raise <| NotImplementedException()
-        member this.find2 shift hash key notFound = raise <| NotImplementedException()
-        member this.getNodeSeq ()  = raise <| NotImplementedException()
-        member this.assocTransient e shift hash key value addedLeaf = raise <| NotImplementedException()
-        member this.withoutTransient e shift hash key removedLeaf = raise <| NotImplementedException()
-        member this.iterator d  = raise <| NotImplementedException()
-        member this.iteratorT d = raise <| NotImplementedException()
-
-//type BNodeEntry3 =
-//    | KeyValue of Key: obj * Value: obj
-//    | Node of Node: SHMNode3
-//    | Empty
-
-//and [<ReferenceEquality>] SHMNode3 =
-//    | ArrayNode3 of Edit: AtomicReference<Thread> * Count: int ref * Nodes: (SHMNode3 option) []
-//    | BitmapNode3 of Edit: AtomicReference<Thread> * Bitmap: int ref * Entries: BNodeEntry3 [] ref
-//    | CollisionNode3 of Edit: AtomicReference<Thread> * Hash: int * Count: int ref * KVs: MapEntry [] ref
-
-//    static member EmptyBitmapNode =
-//        BitmapNode3(null, ref 0, ref Array.empty<BNodeEntry3>)
-
-//    static member tryFindCNodeIndex(key: obj, kvs: MapEntry []) =
-//        kvs
-//        |> Array.tryFindIndex
-//            (fun kv ->
-//                (not (isNull kv))
-//                && equiv ((kv :> IMapEntry).key (), key))
-
-//    static member createNode (shift: int) (key1: obj) (val1: obj) (key2hash: int) (key2: obj) (val2: obj) : SHMNode3 =
-//        let key1hash = hash (key1)
-
-//        if key1hash = key2hash then
-//            CollisionNode3(
-//                null,
-//                key1hash,
-//                ref 2,
-//                ref [| MapEntry(key1, val1)
-//                       MapEntry(key2, val2) |]
-//            )
-//        else
-//            let box = Box()
-
-//            let n1 =
-//                SHMNode3.EmptyBitmapNode.assoc shift key1hash key1 val1 box
-
-//            n1.assoc shift key2hash key2 val2 box
-
-//    member this.getNodeSeq() =
-//        match this with
-//        | ArrayNode3 (Count = count; Nodes = nodes) -> ArrayNode3Seq.create (nodes, 0)
-//        | BitmapNode3 (Bitmap = bitmap; Entries = entries) -> BitmapNode3Seq.create (entries.Value, 0)
-//        | CollisionNode3 (Hash = hash; Count = count; KVs = kvs) -> CollisionNode3Seq.create (kvs.Value, 0)
-
-//    member this.find (shift: int) (hash: int) (key: obj) : IMapEntry option =
-//        match this with
-//        | ArrayNode3 (Count = count; Nodes = nodes) ->
-//            let idx = mask (hash, shift)
-
-//            match nodes.[idx] with
-//            | None -> None
-//            | Some node -> node.find (shift + 5) hash key
-//        | BitmapNode3 (Bitmap = bitmap; Entries = entries) ->
-//            match hashToIndex hash shift bitmap.Value with
-//            | None -> None
-//            | Some idx ->
-//                match entries.Value.[idx] with
-//                | KeyValue (Key = k; Value = v) ->
-//                    if equiv (key, k) then
-//                        (MapEntry(k, v) :> IMapEntry) |> Some
-//                    else
-//                        None
-//                | Node (Node = node) -> node.find (shift + 5) hash key
-//                | Empty ->
-//                    InvalidOperationException("Found Empty cell in BitmapNode3 -- algorithm bug")
-//                    |> raise
-//        | CollisionNode3 (Hash = hash; Count = count; KVs = kvs) ->
-//            match SHMNode3.tryFindCNodeIndex (key, kvs.Value) with
-//            | None -> None
-//            | Some idx -> Some(upcast kvs.Value.[idx])
-
-
-//    member this.find2 (shift: int) (hash: int) (key: obj) (notFound: obj) : obj =
-//        match this with
-//        | ArrayNode3 (Count = count; Nodes = nodes) ->
-//            let idx = mask (hash, shift)
-
-//            match nodes.[idx] with
-//            | None -> notFound
-//            | Some node -> node.find2 (shift + 5) hash key notFound
-
-//        | BitmapNode3 (Bitmap = bitmap; Entries = entries) ->
-//            match hashToIndex hash shift bitmap.Value with
-//            | None -> notFound
-//            | Some idx ->
-//                match entries.Value.[idx] with
-//                | KeyValue (Key = k; Value = v) -> if equiv (key, k) then v else notFound
-//                | Node (Node = node) -> node.find2 (shift + 5) hash key notFound
-//                | Empty ->
-//                    InvalidOperationException("Found Empty cell in BitmapNode3 -- algorithm bug")
-//                    |> raise
-
-//        | CollisionNode3 (Hash = hash; Count = count; KVs = kvs) ->
-//            match SHMNode3.tryFindCNodeIndex (key, kvs.Value) with
-//            | None -> notFound
-//            | Some idx -> (kvs.Value.[idx] :> IMapEntry).value ()
-
-//    member this.assoc (shift: int) (hash: int) (key: obj) (value: obj) (addedLeaf: Box) : SHMNode3 =
-//        match this with
-//        | ArrayNode3 (Count = count; Nodes = nodes) ->
-//            let idx = mask (hash, shift)
-
-//            match nodes.[idx] with
-//            | None ->
-//                let newNode =
-//                    SHMNode3.EmptyBitmapNode.assoc (shift + 5) hash key value addedLeaf
-
-//                ArrayNode3(null, ref (count.Value + 1), cloneAndSet (nodes, idx, Some newNode))
-//            | Some node ->
-//                let newNode =
-//                    node.assoc (shift + 5) hash key value addedLeaf
-
-//                if newNode = node then
-//                    this
-//                else
-//                    ArrayNode3(null, ref count.Value, cloneAndSet (nodes, idx, Some newNode))
-
-//        | BitmapNode3 (Bitmap = bitmap; Entries = entries) ->
-//            match hashToIndex hash shift bitmap.Value with
-//            | None ->
-//                let n = bitCount (bitmap.Value)
-
-//                if n >= 16 then
-//                    let nodes: SHMNode3 option [] = Array.zeroCreate 32
-//                    let jdx = mask (hash, shift)
-
-//                    nodes.[jdx] <-
-//                        SHMNode3.EmptyBitmapNode.assoc (shift + 5) hash key value addedLeaf
-//                        |> Some
-
-//                    let mutable j = 0
-
-//                    for i = 0 to 31 do
-//                        if ((bitmap.Value >>> i) &&& 1) <> 0 then
-//                            nodes.[i] <-
-//                                match entries.Value.[j] with
-//                                | KeyValue (Key = k; Value = v) ->
-//                                    SHMNode3.EmptyBitmapNode.assoc (shift + 5) (getHash k) k v addedLeaf
-//                                    |> Some
-//                                | Node (Node = node) -> node |> Some
-//                                | Empty ->
-//                                    InvalidOperationException("Found Empty cell in BitmapNode3 -- algorithm bug")
-//                                    |> raise
-
-//                            j <- j + 1
-
-//                    ArrayNode3(null, ref (n + 1), nodes)
-
-//                else
-//                    let bit = bitPos (hash, shift)
-//                    let idx = bitIndex (bitmap.Value, bit)
-//                    let newArray: BNodeEntry3 [] = Array.zeroCreate (n + 1)
-//                    Array.Copy(entries.Value, 0, newArray, 0, idx)
-//                    newArray.[idx] <- KeyValue(key, value)
-//                    Array.Copy(entries.Value, idx, newArray, idx + 1, n - idx)
-//                    addedLeaf.set ()
-//                    BitmapNode3(null, ref (bitmap.Value ||| bit), ref newArray)
-
-//            | Some idx ->
-//                let entry = entries.Value.[idx]
-
-//                match entry with
-//                | KeyValue (Key = k; Value = v) ->
-//                    if equiv (key, k) then
-//                        if value = v then
-//                            this
-//                        else
-//                            BitmapNode3(
-//                                null,
-//                                ref bitmap.Value,
-//                                ref (cloneAndSet (entries.Value, idx, KeyValue(key, value)))
-//                            )
-//                    else
-//                        addedLeaf.set ()
-
-//                        let newNode =
-//                            SHMNode3.createNode (shift + 5) k v hash key value
-
-//                        BitmapNode3(null, ref bitmap.Value, ref (cloneAndSet (entries.Value, idx, Node(newNode))))
-//                | Node (Node = node) ->
-//                    let newNode =
-//                        node.assoc (shift + 5) hash key value addedLeaf
-
-//                    if newNode = node then
-//                        this
-//                    else
-//                        BitmapNode3(null, ref bitmap.Value, ref (cloneAndSet (entries.Value, idx, Node(newNode))))
-//                | Empty ->
-//                    InvalidOperationException("Found Empty cell in BitmapNode3 -- algorithm bug")
-//                    |> raise
-
-//        | CollisionNode3 (Hash = h; Count = count; KVs = kvs) ->
-//            if hash = h then
-//                match SHMNode3.tryFindCNodeIndex (key, kvs.Value) with
-//                | Some idx ->
-//                    let kv = kvs.Value.[idx] :> IMapEntry
-
-//                    if kv.value () = value then
-//                        this
-//                    else
-//                        CollisionNode3(
-//                            null,
-//                            hash,
-//                            ref count.Value,
-//                            ref (cloneAndSet (kvs.Value, idx, MapEntry(key, value)))
-//                        )
-//                | None ->
-//                    let newArray: MapEntry [] = count.Value + 1 |> Array.zeroCreate
-//                    Array.Copy(kvs.Value, 0, newArray, 0, count.Value)
-//                    newArray.[count.Value] <- MapEntry(key, value)
-//                    addedLeaf.set ()
-//                    CollisionNode3(null, hash, ref (count.Value + 1), ref newArray)
-//            else
-//                BitmapNode3(
-//                    null,
-//                    ref (bitPos (hash, shift)),
-//                    ref [| Node(this) |]
-//                )
-//                    .assoc
-//                    shift
-//                    h
-//                    key
-//                    value
-//                    addedLeaf
-
-
-
-
-//    member this.without (shift: int) (hash: int) (key: obj) : SHMNode3 option =
-//        match this with
-//        | ArrayNode3 (Count = count; Nodes = nodes) ->
-//            let idx = mask (hash, shift)
-
-//            match nodes.[idx] with
-//            | None -> this |> Some
-//            | Some node ->
-//                match node.without (shift + 5) hash key with
-//                | None -> // this branch got deleted
-//                    if count.Value <= 8 then
-//                        SHMNode3.pack null count.Value nodes idx |> Some // shrink
-//                    else
-//                        ArrayNode3(null, ref (count.Value - 1), cloneAndSet (nodes, idx, None))
-//                        |> Some // zero out this entry
-//                | Some newNode ->
-//                    if newNode = node then
-//                        this |> Some
-//                    else
-//                        ArrayNode3(null, ref (count.Value - 1), cloneAndSet (nodes, idx, Some newNode))
-//                        |> Some
-
-//        | BitmapNode3 (Bitmap = bitmap; Entries = entries) ->
-//            match hashToIndex hash shift bitmap.Value with
-//            | None -> this |> Some
-//            | Some idx ->
-//                let entry = entries.Value.[idx]
-
-//                match entry with
-//                | KeyValue (Key = k; Value = v) ->
-//                    if equiv (k, key) then
-//                        let bit = bitPos (hash, shift)
-
-//                        if bitmap.Value = bit then // only one entry
-//                            None
-//                        else
-//                            BitmapNode3(null, ref (bitmap.Value ^^^ bit), ref (removeEntry (entries.Value, idx)))
-//                            |> Some
-//                    else
-//                        this |> Some
-//                | Node (Node = node) ->
-//                    match node.without (shift + 5) hash key with
-//                    | None -> this |> Some
-//                    | Some n ->
-//                        if n = node then
-//                            this |> Some
-//                        else
-//                            BitmapNode3(null, ref bitmap.Value, ref (cloneAndSet (entries.Value, idx, Node(n))))
-//                            |> Some
-//                | Empty ->
-//                    InvalidOperationException("Found Empty cell in BitmapNode3 -- algorithm bug")
-//                    |> raise
-
-//        | CollisionNode3 (Hash = h; Count = count; KVs = kvs) ->
-//            match SHMNode3.tryFindCNodeIndex (key, kvs.Value) with
-//            | None -> this |> Some
-//            | Some idx ->
-//                if count.Value = 1 then
-//                    None
-//                else
-//                    CollisionNode3(null, h, ref (count.Value - 1), ref (removeEntry (kvs.Value, idx)))
-//                    |> Some
-
-//    static member modifyOrCreateANode
-//        (thisNode: SHMNode3)
-//        (currEdit: AtomicReference<Thread>)
-//        (currNodes: SHMNode3 option [])
-//        (refCurrCount: int ref)
-//        (newEdit: AtomicReference<Thread>)
-//        (idx: int)
-//        (newNode: SHMNode3)
-//        : SHMNode3 =
-//        if currEdit = newEdit then
-//            // Current node is editable -- modify in-place
-//            currNodes.[idx] <- Some newNode
-//            refCurrCount.Value <- refCurrCount.Value + 1
-//            thisNode
-//        else
-//            // create new editable node with correct data
-//            let newNodes = currNodes.Clone() :?> SHMNode3 option []
-//            newNodes.[idx] <- Some newNode
-//            ArrayNode3(newEdit, ref (refCurrCount.Value + 1), newNodes)
-
-//    static member modifyOrCreateBNode
-//        (thisNode: SHMNode3)
-//        (currEdit: AtomicReference<Thread>)
-//        (refCurrBitmap: int ref)
-//        (refCurrEntries: BNodeEntry3 [] ref)
-//        (newEdit: AtomicReference<Thread>)
-//        (newBitmap: int)
-//        (newEntries: BNodeEntry3 [])
-//        =
-//        if currEdit = newEdit then
-//            // Current node is editable -- modify in-place
-//            refCurrBitmap.Value <- newBitmap
-//            refCurrEntries.Value <- newEntries
-//            thisNode
-//        else
-//            // create new editable node with correct data
-//            BitmapNode3(newEdit, ref newBitmap, ref newEntries)
-
-
-//    member this.assocTransient
-//        (e: AtomicReference<Thread>)
-//        (shift: int)
-//        (hash: int)
-//        (key: obj)
-//        (value: obj)
-//        (addedLeaf: Box)
-//        : SHMNode3 =
-//        match this with
-//        | ArrayNode3 (Edit = edit; Count = count; Nodes = nodes) ->
-//            let idx = mask (hash, shift)
-
-//            match nodes.[idx] with
-//            | None ->
-//                let newNode =
-//                    SHMNode3.EmptyBitmapNode.assocTransient e (shift + 5) hash key value addedLeaf
-
-//                SHMNode3.modifyOrCreateANode this edit nodes count e idx newNode
-
-//            | Some node ->
-//                let newNode =
-//                    node.assocTransient e (shift + 5) hash key value addedLeaf
-
-//                if newNode = node then
-//                    this
-//                else
-//                    SHMNode3.modifyOrCreateANode this edit nodes count e idx newNode
-
-//        | BitmapNode3 (Edit = edit; Bitmap = bitmap; Entries = entries) ->
-//            match hashToIndex hash shift bitmap.Value with
-//            | None ->
-//                let n = bitCount (bitmap.Value)
-
-//                if edit = e && n < entries.Value.Length then
-//                    // we have space in the array and we are already editing this node transiently so we can just move things around here.
-//                    // If we have space in the array but we are not already editing this node, then the space is not helpful -- we just fall through to the subsequent cases
-//                    addedLeaf.set ()
-//                    let bit = bitPos (hash, shift)
-//                    let idx = bitIndex (bitmap.Value, bit)
-//                    let array = entries.Value
-//                    Array.Copy(array, idx, array, idx + 1, n - idx)
-//                    array.[idx] <- KeyValue(key, value)
-//                    bitmap.Value <- bitmap.Value ||| idx
-//                    this
-
-//                elif n >= 16 then
-//                    let nodes: SHMNode3 option [] = Array.zeroCreate 32
-//                    let jdx = mask (hash, shift)
-
-//                    nodes.[jdx] <-
-//                        SHMNode3.EmptyBitmapNode.assocTransient e (shift + 5) hash key value addedLeaf
-//                        |> Some
-
-//                    let mutable j = 0
-
-//                    for i = 0 to 31 do
-//                        if ((bitmap.Value >>> i) &&& 1) <> 0 then
-//                            nodes.[i] <-
-//                                match entries.Value.[j] with
-//                                | KeyValue (Key = k; Value = v) ->
-//                                    SHMNode3.EmptyBitmapNode.assocTransient e (shift + 5) (getHash k) k v addedLeaf
-//                                    |> Some
-//                                | Node (Node = node) -> node |> Some
-//                                | Empty ->
-//                                    InvalidOperationException("Found Empty cell in BitmapNode3 -- algorithm bug")
-//                                    |> raise
-
-//                            j <- j + 1
-
-//                    ArrayNode3(e, ref (n + 1), nodes)
-
-//                else
-//                    let bit = bitPos (hash, shift)
-//                    let idx = bitIndex (bitmap.Value, bit)
-//                    let newArray: BNodeEntry3 [] = Array.zeroCreate (n + 1)
-//                    Array.Copy(entries.Value, 0, newArray, 0, idx)
-//                    newArray.[idx] <- KeyValue(key, value)
-//                    Array.Copy(entries.Value, idx, newArray, idx + 1, n - idx)
-//                    addedLeaf.set ()
-//                    SHMNode3.modifyOrCreateBNode this edit bitmap entries e (bitmap.Value ||| bit) newArray
-
-//            | Some idx ->
-//                let entry = entries.Value.[idx]
-
-//                match entry with
-//                | KeyValue (Key = k; Value = v) ->
-//                    if equiv (key, k) then
-//                        if value = v then
-//                            this
-//                        else
-//                            BitmapNode3(
-//                                null,
-//                                ref bitmap.Value,
-//                                ref (cloneAndSet (entries.Value, idx, KeyValue(key, value)))
-//                            )
-//                    else
-//                        addedLeaf.set ()
-
-//                        let newNode =
-//                            SHMNode3.createNode (shift + 5) k v hash key value
-
-//                        BitmapNode3(null, ref bitmap.Value, ref (cloneAndSet (entries.Value, idx, Node(newNode))))
-//                | Node (Node = node) ->
-//                    let newNode =
-//                        node.assoc (shift + 5) hash key value addedLeaf
-
-//                    if newNode = node then
-//                        this
-//                    else
-//                        BitmapNode3(null, ref bitmap.Value, ref (cloneAndSet (entries.Value, idx, Node(newNode))))
-//                | Empty ->
-//                    InvalidOperationException("Found Empty cell in BitmapNode3 -- algorithm bug")
-//                    |> raise
-
-//        | CollisionNode3 (Edit = edit; Hash = h; Count = count; KVs = kvs) ->
-//            if hash = h then
-//                match SHMNode3.tryFindCNodeIndex (key, kvs.Value) with
-//                | Some idx ->
-//                    let kv = kvs.Value.[idx] :> IMapEntry
-
-//                    if kv.value () = value then
-//                        this
-//                    elif edit = e then
-//                        // we have an entry with different value and we are editable already.
-//                        // Replace the value
-//                        kvs.Value.[idx] <- MapEntry(key, value)
-//                        this
-//                    else
-//                        // we have an entry with a different value, but we are not editable.
-//                        // create a new node with the new k/v entry
-//                        CollisionNode3(
-//                            e,
-//                            hash,
-//                            ref count.Value,
-//                            ref (cloneAndSet (kvs.Value, idx, MapEntry(key, value)))
-//                        )
-//                | None ->
-//                    // no entry for this key, so we will be adding.
-//                    addedLeaf.set ()
-
-//                    if edit = e then
-//                        // we are editable.
-//                        // Either we have existing space or we need to create a new array.
-//                        // Either way, we can update in place.
-//                        if kvs.Value.Length > count.Value then
-//                            // we have space
-//                            kvs.Value.[count.Value] <- MapEntry(key, value)
-//                            count.Value <- count.Value + 1
-//                            this
-//                        else
-//                            // no space, create a new array.
-//                            let currLength = kvs.Value.Length
-//                            let newArray: MapEntry [] = currLength + 1 |> Array.zeroCreate
-//                            Array.Copy(kvs.Value, 0, newArray, 0, currLength)
-//                            newArray.[currLength] <- MapEntry(key, value)
-//                            kvs.Value <- newArray
-//                            count.Value <- count.Value + 1
-//                            this
-//                    else
-//                        // we are not editable, so we need to create a new node
-
-//                        let newArray: MapEntry [] = count.Value + 1 |> Array.zeroCreate
-//                        Array.Copy(kvs.Value, 0, newArray, 0, count.Value)
-//                        newArray.[count.Value] <- MapEntry(key, value)
-
-//                        CollisionNode3(e, hash, ref (count.Value + 1), ref newArray)
-//            else
-//                // we got to this collision node, but our key has different hash.
-//                // Need to create a bitmap node here holding our collision node and add our new key/value to it.
-//                BitmapNode3(
-//                    e,
-//                    ref (bitPos (hash, shift)),
-//                    ref [| Node(this) |]
-//                )
-//                    .assocTransient
-//                    e
-//                    shift
-//                    h
-//                    key
-//                    value
-//                    addedLeaf
-
-//    member this.withoutTransient
-//        (e: AtomicReference<Thread>)
-//        (shift: int)
-//        (hash: int)
-//        (key: obj)
-//        (removedLeaf: Box)
-//        : SHMNode3 option =
-//        match this with
-//        | ArrayNode3 (Edit = edit; Count = count; Nodes = nodes) ->
-//            let idx = mask (hash, shift)
-
-//            match nodes.[idx] with
-//            | None -> this |> Some
-//            | Some node ->
-//                match node.withoutTransient e (shift + 5) hash key removedLeaf with
-//                | None -> // this branch got deleted
-//                    if count.Value <= 8 then
-//                        SHMNode3.pack e count.Value nodes idx |> Some // shrink
-//                    elif e = edit then
-//                        // modify in place
-//                        count.Value <- count.Value - 1
-//                        nodes.[idx] <- None
-//                        this |> Some
-//                    else
-//                        // create new node
-//                        ArrayNode3(e, ref (count.Value - 1), cloneAndSet (nodes, idx, None))
-//                        |> Some // zero out this entry
-//                | Some newNode ->
-//                    if newNode = node then
-//                        this |> Some
-//                    else
-//                        nodes.[idx] <- Some newNode
-//                        count.Value <- count.Value - 1
-//                        this |> Some
-//        | BitmapNode3 (Edit = edit; Bitmap = bitmap; Entries = entries) ->
-//            match hashToIndex hash shift bitmap.Value with
-//            | None -> this |> Some
-//            | Some idx ->
-//                let entry = entries.Value.[idx]
-
-//                match entry with
-//                | KeyValue (Key = k; Value = v) ->
-//                    if equiv (k, key) then
-//                        let bit = bitPos (hash, shift)
-
-//                        if bitmap.Value = bit then // only one entry
-//                            None
-//                        elif edit = e then
-//                            // we are editable, edit in place
-//                            bitmap.Value <- bitmap.Value ^^^ bit
-//                            entries.Value.[idx] <- Empty
-//                            this |> Some
-//                        else
-//                            BitmapNode3(e, ref (bitmap.Value ^^^ bit), ref (removeEntry (entries.Value, idx)))
-//                            |> Some
-//                    else
-//                        this |> Some
-//                | Node (Node = node) ->
-//                    match node.withoutTransient e (shift + 5) hash key removedLeaf with
-//                    | None -> this |> Some
-//                    | Some n ->
-//                        if n = node then
-//                            this |> Some
-//                        else
-//                            BitmapNode3(null, ref bitmap.Value, ref (cloneAndSet (entries.Value, idx, Node(n))))
-//                            |> Some
-//                | Empty ->
-//                    InvalidOperationException("Found Empty cell in BitmapNode3 -- algorithm bug")
-//                    |> raise
-
-//        | CollisionNode3 (Edit = edit; Hash = h; Count = count; KVs = kvs) ->
-//            match SHMNode3.tryFindCNodeIndex (key, kvs.Value) with
-//            | None -> this |> Some
-//            | Some idx ->
-//                removedLeaf.set ()
-
-//                if count.Value = 1 then
-//                    None
-//                else if edit = e then
-//                    // we are editable, edit in place
-//                    count.Value <- count.Value - 1
-//                    kvs.Value.[idx] <- kvs.Value.[count.Value]
-//                    kvs.Value.[count.Value] <- null
-//                    this |> Some
-//                else
-//                    CollisionNode3(e, h, ref (count.Value - 1), ref (removeEntry (kvs.Value, idx)))
-//                    |> Some
-
-
-//    member this.iteratorT(d: KVTranformFn<'T>) : IEnumerator<'T> =
-//        match this with
-//        | ArrayNode3 (Nodes = nodes) ->
-//            let s =
-//                seq {
-//                    for onode in nodes do
-//                        match onode with
-//                        | None -> ()
-//                        | Some node ->
-//                            let ie = node.iteratorT (d)
-
-//                            while ie.MoveNext() do
-//                                yield ie.Current
-//                }
-
-//            s.GetEnumerator()
-//        | BitmapNode3 (Bitmap = bitmap; Entries = entries) ->
-//            let s =
-//                seq {
-//                    for entry in entries.Value do
-//                        match entry with
-//                        | KeyValue (Key = k; Value = v) -> yield d (k, v)
-//                        | Node (Node = node) ->
-//                            let ie = node.iteratorT (d)
-
-//                            while ie.MoveNext() do
-//                                yield ie.Current
-//                        | Empty -> ()
-
-//                }
-
-//            s.GetEnumerator()
-//        | CollisionNode3 (Hash = h; Count = count; KVs = kvs) ->
-//            let s =
-//                seq {
-//                    for kv in kvs.Value do
-//                        let me = kv :> IMapEntry
-//                        yield d (me.key (), me.value ())
-//                }
-
-//            s.GetEnumerator()
-
-//and ArrayNode3Seq(nodes: (SHMNode3 option) [], idx: int, s: ISeq) =
-//    inherit ASeq()
-
-
-//    static member create(nodes: (SHMNode3 option) [], idx: int) : ISeq =
-//        if idx >= nodes.Length then
-//            null
-//        else
-//            match nodes.[idx] with
-//            | Some (node) ->
-//                match node.getNodeSeq () with
-//                | null -> ArrayNode3Seq.create (nodes, idx + 1)
-//                | s -> ArrayNode3Seq(nodes, idx, s)
-//            | None -> ArrayNode3Seq.create (nodes, idx + 1)
-
-//    interface ISeq with
-//        member _.first() = s.first ()
-
-//        member _.next() =
-//            match s.next () with
-//            | null -> ArrayNode3Seq.create (nodes, idx + 1)
-//            | s1 -> ArrayNode3Seq(nodes, idx, s1)
-
-
-//and BitmapNode3Seq(entries: BNodeEntry3 [], idx: int, seq: ISeq) =
-//    inherit ASeq()
-
-//    static member create(entries: BNodeEntry3 [], idx: int) : ISeq =
-//        if idx >= entries.Length then
-//            null
-//        else
-//            match entries.[idx] with
-//            | KeyValue (_, _) -> BitmapNode3Seq(entries, idx, null)
-//            | Node (Node = node) ->
-//                match node.getNodeSeq () with
-//                | null -> BitmapNode3Seq.create (entries, idx + 1)
-//                | s -> BitmapNode3Seq(entries, idx, s)
-//            | Empty -> null
-
-//    interface ISeq with
-//        member _.first() =
-//            match entries.[idx] with
-//            | KeyValue (Key = k; Value = v) -> MapEntry(k, v)
-//            | Node (Node = _) -> seq.first ()
-//            | Empty ->
-//                InvalidOperationException("Found Empty cell in BitmapNode3 -- algorithm bug")
-//                |> raise
-
-
-//        member _.next() =
-//            match entries.[idx] with
-//            | KeyValue (_, _) -> BitmapNode3Seq.create (entries, idx + 1)
-//            | Node (_) ->
-//                match seq.next () with
-//                | null -> BitmapNode3Seq.create (entries, idx + 1)
-//                | s -> BitmapNode3Seq(entries, idx, s)
-//            | Empty ->
-//                InvalidOperationException("Found Empty cell in BitmapNode3 -- algorithm bug")
-//                |> raise
-
-
-//and CollisionNode3Seq(kvs: MapEntry [], idx: int) =
-//    inherit ASeq()
-
-//    static member create(kvs: MapEntry [], idx: int) : ISeq =
-//        if idx >= kvs.Length then
-//            null
-//        else
-//            CollisionNode3Seq(kvs, idx)
-
-//    interface ISeq with
-//        member _.first() = kvs.[idx]
-//        member _.next() = CollisionNode3Seq.create (kvs, idx + 1)
-
+        member this.assoc shift hash key value addedLeaf = 
+           if hash = nodeHash then
+                match this.tryFindNodeIndex key with
+                | Some idx ->
+                    let kv = kvs.[idx] :> IMapEntry
+
+                    if kv.value () = value then
+                        this
+                    else
+                        CollisionNode3(
+                            null,
+                            hash,
+                            count,
+                            cloneAndSet (kvs, idx, MapEntry(key, value))
+                        )
+                | None ->
+                    let newArray: MapEntry [] = count + 1 |> Array.zeroCreate
+                    Array.Copy(kvs, 0, newArray, 0, count)
+                    newArray.[count] <- MapEntry(key, value)
+                    addedLeaf.set ()
+                    CollisionNode3(null, hash, count + 1, newArray)
+            else
+                (BitmapNode3(
+                    null,
+                    bitPos (hash, shift),
+                    [| Node(this) |]
+                ) :> INode3)
+                    .assoc
+                    shift
+                    h
+                    key
+                    value
+                    addedLeaf
+
+        member this.without shift hash key  = 
+            match this.tryFindNodeIndex key with
+            | None -> this :> INode3 |> Some
+            | Some idx ->
+                if count = 1 then
+                    None
+                else
+                    CollisionNode3(null, h, count, removeEntry (kvs, idx))
+                    :> INode3 |> Some
+
+        member this.find shift hash key = 
+            match this.tryFindNodeIndex key with
+            | None -> None
+            | Some idx -> Some(upcast kvs.[idx])
+
+
+        member this.find2 shift hash key notFound = 
+            match this.tryFindNodeIndex key with
+            | None -> notFound
+            | Some idx -> (kvs.[idx] :> IMapEntry).value ()
+
+        member this.getNodeSeq ()  =  CollisionNode3Seq.create (kvs, 0)
+
+        member this.assocTransient e shift hash key value addedLeaf = 
+            if hash = nodeHash then
+                match this.tryFindNodeIndex key with
+                | Some idx ->
+                    let kv = kvs.[idx] :> IMapEntry
+
+                    if kv.value () = value then
+                        this
+                    elif edit = e then
+                        // we have an entry with different value and we are editable already.
+                        // Replace the value
+                        kvs.[idx] <- MapEntry(key, value)
+                        this
+                    else
+                        // we have an entry with a different value, but we are not editable.
+                        // create a new node with the new k/v entry
+                        CollisionNode3(
+                            e,
+                            hash,
+                            count,
+                            cloneAndSet (kvs, idx, MapEntry(key, value))
+                        )
+                | None ->
+                    // no entry for this key, so we will be adding.
+                    addedLeaf.set ()
+
+                    if edit = e then
+                        // we are editable.
+                        // Either we have existing space or we need to create a new array.
+                        // Either way, we can update in place.
+                        if kvs.Length > count then
+                            // we have space
+                            kvs.[count] <- MapEntry(key, value)
+                            count <- count + 1
+                            this
+                        else
+                            // no space, create a new array.
+                            let currLength = kvs.Length
+                            let newArray: MapEntry [] = currLength + 1 |> Array.zeroCreate
+                            Array.Copy(kvs, 0, newArray, 0, currLength)
+                            newArray.[currLength] <- MapEntry(key, value)
+                            kvs <- newArray
+                            count <- count + 1
+                            this
+                    else
+                        // we are not editable, so we need to create a new node
+
+                        let newArray: MapEntry [] = count + 1 |> Array.zeroCreate
+                        Array.Copy(kvs, 0, newArray, 0, count)
+                        newArray.[count] <- MapEntry(key, value)
+
+                        CollisionNode3(e, hash, count + 1, newArray)
+            else
+                // we got to this collision node, but our key has different hash.
+                // Need to create a bitmap node here holding our collision node and add our new key/value to it.
+                (BitmapNode3(
+                    e,
+                    bitPos (hash, shift),
+                    [| Node(this) |]
+                ) :> INode3)
+                    .assocTransient
+                    e
+                    shift
+                    h
+                    key
+                    value
+                    addedLeaf
+        
+        member this.withoutTransient e shift hash key removedLeaf = 
+            match this.tryFindNodeIndex key with
+            | None -> this :> INode3 |> Some
+            | Some idx ->
+                removedLeaf.set ()
+
+                if count = 1 then
+                    None
+                else if edit = e then
+                    // we are editable, edit in place
+                    count <- count - 1
+                    kvs.[idx] <- kvs.[count]
+                    kvs.[count] <- null
+                    this :> INode3  |> Some
+                else
+                    CollisionNode3(e, h, count - 1, removeEntry (kvs, idx))
+                    :> INode3 |> Some
+
+
+        member this.iterator d  = 
+            let s =
+                seq {
+                    for kv in kvs do
+                        let me = kv :> IMapEntry
+                        yield d (me.key (), me.value ())
+                }
+            s.GetEnumerator()
+
+        member this.iteratorT d = 
+            let s =
+                seq {
+                    for kv in kvs do
+                        let me = kv :> IMapEntry
+                        yield d (me.key (), me.value ())
+                }
+            s.GetEnumerator()
+
+
+and ArrayNode3Seq(nodes: INode3 option [], idx: int, s: ISeq) =
+    inherit ASeq()
+
+
+    static member create(nodes: (INode3 option) [], idx: int) : ISeq =
+        if idx >= nodes.Length then
+            null
+        else
+            match nodes.[idx] with
+            | Some (node) ->
+                match node.getNodeSeq () with
+                | null -> ArrayNode3Seq.create (nodes, idx + 1)
+                | s -> ArrayNode3Seq(nodes, idx, s)
+            | None -> ArrayNode3Seq.create (nodes, idx + 1)
+
+    interface ISeq with
+        member _.first() = s.first ()
+
+        member _.next() =
+            match s.next () with
+            | null -> ArrayNode3Seq.create (nodes, idx + 1)
+            | s1 -> ArrayNode3Seq(nodes, idx, s1)
+
+and BitmapNode3Seq(entries: BNodeEntry3 [], idx: int, seq: ISeq) =
+    inherit ASeq()
+
+    static member create(entries: BNodeEntry3 [], idx: int) : ISeq =
+        if idx >= entries.Length then
+            null
+        else
+            match entries.[idx] with
+            | KeyValue (_, _) -> BitmapNode3Seq(entries, idx, null)
+            | Node (Node = node) ->
+                match node.getNodeSeq () with
+                | null -> BitmapNode3Seq.create (entries, idx + 1)
+                | s -> BitmapNode3Seq(entries, idx, s)
+            | EmptyEntry -> null
+
+    interface ISeq with
+        member _.first() =
+            match entries.[idx] with
+            | KeyValue (Key = k; Value = v) -> MapEntry(k, v)
+            | Node (Node = _) -> seq.first ()
+            | EmptyEntry ->
+                InvalidOperationException("Found Empty cell in BitmapNode3 -- algorithm bug")
+                |> raise
+
+
+        member _.next() =
+            match entries.[idx] with
+            | KeyValue (_, _) -> BitmapNode3Seq.create (entries, idx + 1)
+            | Node (_) ->
+                match seq.next () with
+                | null -> BitmapNode3Seq.create (entries, idx + 1)
+                | s -> BitmapNode3Seq(entries, idx, s)
+            | EmptyEntry ->
+                InvalidOperationException("Found Empty cell in BitmapNode3 -- algorithm bug")
+                |> raise
+
+and CollisionNode3Seq(kvs: MapEntry [], idx: int) =
+    inherit ASeq()
+
+    static member create(kvs: MapEntry [], idx: int) : ISeq =
+        if idx >= kvs.Length then
+            null
+        else
+            CollisionNode3Seq(kvs, idx)
+
+    interface ISeq with
+        member _.first() = kvs.[idx]
+        member _.next() = CollisionNode3Seq.create (kvs, idx + 1)
 

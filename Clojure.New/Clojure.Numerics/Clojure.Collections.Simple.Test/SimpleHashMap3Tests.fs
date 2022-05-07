@@ -13,7 +13,7 @@ open System
 
 [<Tests>]
 let basicSimpleHashMap3CreateTests =
-    testList
+    ftestList
         "Basic SimpleHashMap3 create tests"
         [
 
@@ -63,7 +63,7 @@ let basicSimpleHashMap3CreateTests =
 
 [<Tests>]
 let basicSimpleHashMap3AssocTests =
-    testList
+    ftestList
         "Basic SimpleHashMap3 Assoc tests"
         [
 
@@ -166,7 +166,7 @@ let basicSimpleHashMap3AssocTests =
 
 [<Tests>]
 let basicSimpleHashMap3PersistentCollectionTests =
-    testList
+    ftestList
         "Basic SimpleHashMap3 PersistentCollection tests"
         [
 
@@ -222,7 +222,7 @@ let basicSimpleHashMap3PersistentCollectionTests =
 
 [<Tests>]
 let basicSimpleHashMap3PersistentMapTests =
-    testList
+    ftestList
         "Basic SimpleHashMap3 tests"
         [
 
@@ -326,7 +326,7 @@ let basicSimpleHashMap3PersistentMapTests =
 
 [<Tests>]
 let aPersistentMapTests =
-    testList
+    ftestList
         "APersistentMap tests for SimpleHashMap3"
         [
 
@@ -685,7 +685,7 @@ let testCollisions (numEntries: int) (numHashCodes: int) : unit =
 
     // create map with entries  key=CollisionKey(i,_), value = i
 
-    let mutable m = SimpleHashMap3.Empty :> IPersistentMap
+    let mutable m = SimpleHashMap3.EmptyMap :> IPersistentMap
 
     for i = 0 to numEntries - 1 do
         m <- m.assoc (CollisionKey(i, numHashCodes), i)
@@ -814,7 +814,7 @@ let testCollisions (numEntries: int) (numHashCodes: int) : unit =
 
 [<Tests>]
 let simpleHashMap3Collision3Tests =
-    testList
+    ftestList
         "SimpleHashMap3 collision tests"
         [ testCase "Collisions n m"
           <| fun _ ->
@@ -859,7 +859,7 @@ let doBigTest (numEntries: int) =
 
 [<Tests>]
 let bigSimpleHashMap3Tests =
-    testList
+    ftestList
         "big insertions into SimpleHashMap3"
         [
 
