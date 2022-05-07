@@ -93,7 +93,7 @@ module internal ArithmeticHelpers =
     // isSigificandZero implies mantissa = 1000....00
     // allows special case of 1 << some power
 
-    let deconstructDouble (v: double) : DoubleData =
+    let deconstructDouble (v: double): DoubleData =
         let dbytes = BitConverter.GetBytes(v)
         let significand = getDoubleSignificand dbytes
         let biasedExp = getDoubleBiasedExponent dbytes
@@ -106,18 +106,17 @@ module internal ArithmeticHelpers =
         | 0x7ffus when significand = 0UL -> Infinity(isPositive)
         | 0x7ffus -> NaN(significand = significand)
         | _ ->
-            Standard(
-                isPositive = isPositive,
-                mantissa = setBit52 significand,
-                exponent = (int biasedExp) - doubleExponentBias,
-                isSignificandZero = (significand = 0UL)
-            )
+            Standard
+                (isPositive = isPositive,
+                 mantissa = setBit52 significand,
+                 exponent = (int biasedExp) - doubleExponentBias,
+                 isSignificandZero = (significand = 0UL))
 
 
 
 
     /// Given a Decimal value, return a BigInteger with the mantissa and the exponent.
-    let deconstructDecimal (v: decimal) : BigInteger * int =
+    let deconstructDecimal (v: decimal): BigInteger * int =
         if v = 0m then
             BigInteger.Zero, 0
         else

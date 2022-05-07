@@ -56,9 +56,7 @@ let basicSimpleHashMapCreateTests =
               Expect.equal (m.valAt (1)) (upcast "a") "m[1]=a"
               Expect.equal (m.valAt (2)) (upcast "b") "m[2]=b"
               Expect.isTrue (m.containsKey (1)) "Check containsKey"
-              Expect.isFalse (m.containsKey (3)) "Shouldn't contain some random key"
-
-          ]
+              Expect.isFalse (m.containsKey (3)) "Shouldn't contain some random key" ]
 
 
 [<Tests>]
@@ -211,8 +209,8 @@ let basicSimpleHashMapPersistentCollectionTests =
               let m = SimpleHashMap.create (d)
               let s = m.seq ()
               let me1 = s.first () :?> IMapEntry
-              let me2 = s.next().first () :?> IMapEntry
-              let last = s.next().next ()
+              let me2 = s.next().first() :?> IMapEntry
+              let last = s.next().next()
 
               Expect.equal (s.count ()) 2 "COunt of seq should be # of entries in map"
               Expect.equal (me1.value ()) (m.valAt (me1.key ())) "K/V pair should match map"
@@ -282,7 +280,6 @@ let basicSimpleHashMapPersistentMapTests =
           testCase "without on existing key removes it"
           <| fun _ ->
               let d: Dictionary<int, string> = Dictionary()
-
               d.[3] <- "a"
               d.[5] <- "b"
               d.[7] <- "c"
@@ -298,7 +295,6 @@ let basicSimpleHashMapPersistentMapTests =
           testCase "without on missing key returns original"
           <| fun _ ->
               let d: Dictionary<int, string> = Dictionary()
-
               d.[3] <- "a"
               d.[5] <- "b"
               d.[7] <- "c"
@@ -312,17 +308,14 @@ let basicSimpleHashMapPersistentMapTests =
           <| fun _ ->
 
               let d: Dictionary<int, string> = Dictionary()
-
               d.[3] <- "a"
               d.[5] <- "b"
               d.[7] <- "c"
 
               let m1 = SimpleHashMap.create (d)
-              let m2 = m1.without(3).without(5).without (7)
+              let m2 = m1.without(3).without(5).without(7)
 
-              Expect.equal (m2.count ()) 0 "Should be no entries remaining"
-
-          ]
+              Expect.equal (m2.count ()) 0 "Should be no entries remaining" ]
 
 [<Tests>]
 let aPersistentMapTests =
@@ -347,7 +340,6 @@ let aPersistentMapTests =
               d.[2] <- "b"
 
               let m = SimpleHashMap.create (d)
-
               d.[2] <- "c"
 
               Expect.isFalse (m.equiv (d)) "Equal on different dictionary"
@@ -359,7 +351,6 @@ let aPersistentMapTests =
               d.[2] <- "b"
 
               let m = SimpleHashMap.create (d)
-
               d.[3] <- "c"
 
               Expect.isFalse (m.equiv (d)) "Equal on different dictionary"
@@ -371,7 +362,6 @@ let aPersistentMapTests =
               d.[2] <- "b"
 
               let m1 = SimpleHashMap.create (d)
-
               d.[2] <- "c"
 
 
@@ -540,135 +530,7 @@ let aPersistentMapTests =
 
               Expect.equal (m3.valAt (1)) ("a" :> obj) "Updated should be unchanged on untouched key"
               Expect.equal (m3.valAt (2)) ("c" :> obj) "Updated should have updated key value"
-              Expect.equal (m3.valAt (3)) ("d" :> obj) "Updated should have new key value"
-
-          //testCase "invoke(k) does valAt(k)" <| fun _ ->
-          //     let d : Dictionary<int,string> = Dictionary()
-          //     d.[1] <- "a"
-          //     d.[2] <- "b"
-
-          //     let f = SimpleHashMap.create(d) :?> IFn
-
-          //     Expect.equal (f.invoke(1)) ("a" :> obj) "Does ValAt, finds key"
-          //     Expect.isNull (f.invoke(7))  "Does ValAt, does not find key"
-
-          //testCase "invoke(k,nf) does valAt(k,nf)" <| fun _ ->
-          //     let d : Dictionary<int,string> = Dictionary()
-          //     d.[1] <- "a"
-          //     d.[2] <- "b"
-
-          //     let f = SimpleHashMap.create(d) :?> IFn
-
-          //     Expect.equal (f.invoke(1,99)) ("a" :> obj) "Does ValAt, finds key"
-          //     Expect.equal (f.invoke(7,99)) (99 :> obj) "Does ValAt, returns notFound value"
-
-
-          //testCase "Dictionary operations fail as necessary" <| fun _ ->
-          //     let d : Dictionary<int,string> = Dictionary()
-          //     d.[1] <- "a"
-          //     d.[2] <- "b"
-
-          //     let id = SimpleHashMap.create(d) :?> IDictionary
-
-          //     let fadd() = id.Add(3,"c")
-          //     let fclear() = id.Clear()
-          //     let fremove() = id.Remove(1)
-
-          //     Expect.throwsT<InvalidOperationException> fadd "add operation should fail"
-          //     Expect.throwsT<InvalidOperationException> fclear "clear operation should fail"
-          //     Expect.throwsT<InvalidOperationException> fremove "remove operation should fail"
-
-          //testCase "Dictionary operations success as necessary" <| fun _ ->
-          //     let d : Dictionary<int,string> = Dictionary()
-          //     d.[1] <- "a"
-          //     d.[2] <- "b"
-
-          //     let id = SimpleHashMap.create(d) :?> IDictionary
-
-          //     Expect.isTrue (id.Contains(1)) "Finds existing key"
-          //     Expect.isFalse (id.Contains(7))  "Does not find absent key"
-          //     Expect.isTrue  (id.IsFixedSize) "fixedSize is true"
-          //     Expect.isTrue (id.IsReadOnly) "readOnly is true"
-          //     Expect.equal (id.[2]) ("b" :> obj) "Indexing works on existing key"
-          //     Expect.isNull (id.[7]) "Indexing is null on absent key"
-
-          //testCase "Dictionary Keys/Values work" <| fun _ ->
-          //     let d : Dictionary<int,string> = Dictionary()
-          //     d.[1] <- "a"
-          //     d.[2] <- "b"
-
-          //     let id = SimpleHashMap.create(d) :?> IDictionary
-          //     let keys = id.Keys
-          //     let vals = id.Values
-
-          //     Expect.equal (keys.Count) 2 "Keys has correct count"
-          //     Expect.equal (vals.Count) 2 "Values has correct count"
-
-          //     let akeys : obj[] = Array.zeroCreate 2
-          //     let avals : obj[] = Array.zeroCreate 2
-
-          //     keys.CopyTo(akeys,0)
-          //     vals.CopyTo(avals,0)
-
-          //     Array.Sort(akeys)
-          //     Array.Sort(avals)
-
-          //     Expect.equal akeys.[0] (box 1) "first key"
-          //     Expect.equal akeys.[1] (box 2) "second key"
-
-          //     Expect.equal avals.[0] (upcast "a") "first val"
-          //     Expect.equal avals.[1] (upcast "b") "second val"
-
-
-          //testCase "Dictionary enumerator works" <| fun _ ->
-          //     let d : Dictionary<int,string> = Dictionary()
-          //     d.[1] <- "a"
-          //     d.[2] <- "b"
-
-          //     let id = SimpleHashMap.create(d) :?> IDictionary
-          //     let ie = id.GetEnumerator()
-
-          //     Expect.isTrue (ie.MoveNext()) "Move to first element"
-          //     let de1 = ie.Current :?> IMapEntry
-          //     Expect.isTrue (ie.MoveNext()) "Move to second element"
-          //     let de2 = ie.Current :?> IMapEntry
-          //     Expect.isFalse (ie.MoveNext()) "Move past end"
-
-          //     // Could be either order
-          //     Expect.isTrue (
-          //         match de1.key() :?> int32, de1.value() :?> string, de2.key() :?> int32, de2.value() :?> string with
-          //         |  1, "a", 2, "b"
-          //         |  2 , "b", 1, "a" -> true
-          //         | _ -> false
-          //         )
-          //         "matched key/val pairs"
-
-
-          //testCase "ICollection goodies work" <| fun _ ->
-          //     let d : Dictionary<int,string> = Dictionary()
-          //     d.[1] <- "a"
-          //     d.[2] <- "b"
-
-          //     let c = SimpleHashMap.create(d) :?> ICollection
-
-          //     Expect.isTrue (c.IsSynchronized) "should be synchronized"
-          //     Expect.isTrue (Object.ReferenceEquals(c,c.SyncRoot)) "SyncRoot should be self"
-          //     Expect.equal (c.Count) 2 "Count should be correct"
-
-          //     let a : IMapEntry[] = Array.zeroCreate c.Count
-          //     c.CopyTo(a,0)
-
-          //     // Could be either order
-          //     Expect.isTrue (
-          //         match a.[0].key() :?> int32, a.[0].value() :?> string, a.[1].key() :?> int32, a.[1].value() :?> string with
-          //         |  1, "a", 2, "b"
-          //         |  2 , "b", 1, "a" -> true
-          //         | _ -> false
-          //         )
-          //         "matched key/val pairs"
-
-
-          ]
+              Expect.equal (m3.valAt (3)) ("d" :> obj) "Updated should have new key value" ]
 
 type CollisionKey(id, factor) =
     override this.GetHashCode() = id % factor
@@ -681,12 +543,11 @@ type CollisionKey(id, factor) =
     member _.Id = id
     member _.Factor = factor
 
-let testCollisions (numEntries: int) (numHashCodes: int) : unit =
+let testCollisions (numEntries: int) (numHashCodes: int): unit =
 
     // create map with entries  key=CollisionKey(i,_), value = i
 
     let mutable m = SimpleHashMap.Empty :> IPersistentMap
-
     for i = 0 to numEntries - 1 do
         m <- m.assoc (CollisionKey(i, numHashCodes), i)
 
@@ -709,7 +570,6 @@ let testCollisions (numEntries: int) (numHashCodes: int) : unit =
     step 0 (m.seq ())
 
     let b = Array.sort (a)
-
     for i = 0 to b.Length - 1 do
         Expect.equal b.[i] i "Key I"
 
@@ -719,7 +579,7 @@ let testCollisions (numEntries: int) (numHashCodes: int) : unit =
     // check key enumerator
 
     let a: int [] = Array.zeroCreate (m.count ())
-    let imek = (m :?> IMapEnumerable).keyEnumerator ()
+    let imek = (m :?> IMapEnumerable).keyEnumerator()
 
     let rec step (i: int) =
         if imek.MoveNext() then
@@ -729,14 +589,13 @@ let testCollisions (numEntries: int) (numHashCodes: int) : unit =
     step 0
 
     let b = Array.sort (a)
-
     for i = 0 to b.Length - 1 do
         Expect.equal b.[i] i "Key I"
 
     // check value enumerator
 
     let a: int [] = Array.zeroCreate (m.count ())
-    let imek = (m :?> IMapEnumerable).valEnumerator ()
+    let imek = (m :?> IMapEnumerable).valEnumerator()
 
     let rec step (i: int) =
         if imek.MoveNext() then
@@ -746,7 +605,6 @@ let testCollisions (numEntries: int) (numHashCodes: int) : unit =
     step 0
 
     let b = Array.sort (a)
-
     for i = 0 to b.Length - 1 do
         Expect.equal b.[i] i "Val I"
 
@@ -757,13 +615,11 @@ let testCollisions (numEntries: int) (numHashCodes: int) : unit =
 
     for kv in (m :> IEnumerable) do
         let id =
-            ((kv :?> IMapEntry).key () :?> CollisionKey).Id
-
+            ((kv :?> IMapEntry).key() :?> CollisionKey).Id
         a.[i] <- id
         i <- i + 1
 
     let b = Array.sort (a)
-
     for i = 0 to b.Length - 1 do
         Expect.equal b.[i] i "Key I"
 
@@ -778,7 +634,6 @@ let testCollisions (numEntries: int) (numHashCodes: int) : unit =
         i <- i + 1
 
     let b = Array.sort (a)
-
     for i = 0 to b.Length - 1 do
         Expect.equal b.[i] i "Key I"
 
@@ -787,8 +642,6 @@ let testCollisions (numEntries: int) (numHashCodes: int) : unit =
         let key = kv.key () :?> CollisionKey
         let value = kv.value () :?> int
         Expect.equal key.Id value "Value should be same as key.Id"
-
-    // Check valAt, entryAt
     for i = 0 to numEntries - 1 do
         let key = CollisionKey(i, numHashCodes)
         let v = m.valAt (key)
@@ -820,10 +673,7 @@ let simpleHashMapCollisionTests =
           <| fun _ ->
               testCollisions 100 10
               testCollisions 1000 100
-              testCollisions 10000 100
-              //testCollisions 100000 100
-              //testCollisions 1000000 3000 
-        ]
+              testCollisions 10000 100 ]
 
 
 
@@ -834,7 +684,6 @@ let doBigTest (numEntries: int) =
 
     let rnd = Random()
     let dict = Dictionary<int, int>(numEntries)
-
     for i = 0 to numEntries - 1 do
         let r = rnd.Next()
         dict.[r] <- r
@@ -844,8 +693,7 @@ let doBigTest (numEntries: int) =
     Expect.equal (m.count ()) (dict.Count) "Should have same number of entries"
 
     for key in dict.Keys do
-        if not (m.containsKey (key)) then
-            Console.WriteLine("HERE!")
+        if not (m.containsKey (key)) then Console.WriteLine("HERE!")
 
         Expect.isTrue (m.containsKey (key)) "dictionary key should be in map"
         Expect.equal (m.valAt (key)) (upcast key) "Value should be same as key"
@@ -893,37 +741,4 @@ let bigSimpleHashMapTests =
           <| fun _ -> doBigTest 9000
 
           testCase "test for 10000"
-          <| fun _ -> doBigTest 10000
-
-          //testCase "test for 20000"
-          //<| fun _ -> doBigTest 20000
-
-          //testCase "test for 30000"
-          //<| fun _ -> doBigTest 30000
-
-          //testCase "test for 40000"
-          //<| fun _ -> doBigTest 40000
-
-          //testCase "test for 50000"
-          //<| fun _ -> doBigTest 50000
-
-          //testCase "test for 60000"
-          //<| fun _ -> doBigTest 60000
-
-          //testCase "test for 70000"
-          //<| fun _ -> doBigTest 70000
-
-          //testCase "test for 80000"
-          //<| fun _ -> doBigTest 80000
-
-          //testCase "test for 90000"
-          //<| fun _ -> doBigTest 90000
-
-
-          //testCase "test for 100000" <| fun _ ->
-          //    doBigTest 100000
-
-          //testCase "test for 1000000" <| fun _ ->
-          //        doBigTest 1000000
-
-          ]
+          <| fun _ -> doBigTest 10000 ]

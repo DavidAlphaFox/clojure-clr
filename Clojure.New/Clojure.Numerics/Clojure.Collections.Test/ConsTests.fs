@@ -10,10 +10,7 @@ open TestHelpers
 
 let makeConsChain (n: int) =
     let rec step c i =
-        if i = n then
-            c
-        else
-            step (Cons(i, c)) (i + 1)
+        if i = n then c else step (Cons(i, c)) (i + 1)
 
     step (Cons(0, null)) 1
 
@@ -27,34 +24,30 @@ let consTests =
           testCase "No-meta ctor has no meta"
           <| fun _ ->
               let c = Cons("abc", null)
-              let m = (c :> IMeta).meta ()
+              let m = (c :> IMeta).meta()
               Expect.isNull m "Meta should be null"
 
           testCase "Ctor w/ meta has meta"
           <| fun _ ->
               let m = SimpleMap.makeSimpleMap 3
               let c = Cons(m, "abc", null)
-              Expect.isTrue (Object.ReferenceEquals((c :> IMeta).meta (), m)) "Should get back same meta as put in"
+              Expect.isTrue (Object.ReferenceEquals((c :> IMeta).meta(), m)) "Should get back same meta as put in"
 
           testCase "Cons.count works"
           <| fun _ ->
               for i = 1 to 5 do
-                  Expect.equal
-                      ((makeConsChain i :> IPersistentCollection)
-                          .count ())
-                      i
-                      "Count value"
+                  Expect.equal ((makeConsChain i :> IPersistentCollection).count()) i "Count value"
 
           testCase "Cons.seq returns self"
           <| fun _ ->
               let c = makeConsChain 3
-              Expect.isTrue (Object.ReferenceEquals((c :> ISeq).seq (), c)) "Should be self"
+              Expect.isTrue (Object.ReferenceEquals((c :> ISeq).seq(), c)) "Should be self"
 
 
           testCase "Cons.empty is empty"
           <| fun _ ->
               let c = makeConsChain 3
-              let e = (c :> IPersistentCollection).empty ()
+              let e = (c :> IPersistentCollection).empty()
               Expect.equal (e.GetType()) (PersistentList.Empty.GetType()) "Empty should be an EmptyList"
 
           testCase "Cons.Equals"
@@ -79,11 +72,7 @@ let consTests =
 
               Expect.equal (c1.GetHashCode()) (c2.GetHashCode()) "Hash is on value"
               Expect.notEqual (c1.GetHashCode()) (c3.GetHashCode()) "Hash depends on content"
-              Expect.notEqual (c1.GetHashCode()) (c4.GetHashCode()) "Hash depends on order"
-
-
-
-          ]
+              Expect.notEqual (c1.GetHashCode()) (c4.GetHashCode()) "Hash depends on order" ]
 
 // THese are really tests of ASeq functionality, using Cons as the testbed
 
@@ -108,10 +97,8 @@ let aseqTests =
               let fcopytoofar () = ic.CopyTo(Array.zeroCreate<obj> 10, 8)
               let fcopy2dim () = ic.CopyTo(Array2D.zeroCreate 8 8, 0)
               let fcopybadindex () = ic.CopyTo(Array.zeroCreate<obj> 10, -1)
-
               for i = 0 to 4 do
                   Expect.equal a.[i] (box (4 - i)) "Items copied"
-
               for i = 2 to 6 do
                   Expect.equal b.[i] (box (6 - i)) "Items copied at offset"
 
@@ -140,9 +127,7 @@ let aseqTests =
               Expect.equal (e.Current) (box 1) "second element"
               Expect.isTrue (e.MoveNext()) "third move"
               Expect.equal (e.Current) (box 0) "third element"
-              Expect.isFalse (e.MoveNext()) "last move should return false"
-
-          ]
+              Expect.isFalse (e.MoveNext()) "last move should return false" ]
 
 // We do some basic tests on SeqIterator using a Cons chain as the base.
 
@@ -231,12 +216,10 @@ let consISeqTests =
           testCase "cons on cons.seq has correct values"
           <| fun _ ->
               let c = makeConsChain 4
-              let d = (c :> ISeq).cons ("a")
+              let d = (c :> ISeq).cons("a")
 
               let vals: obj list = [ 3; 2; 1; 0 ]
-              verifyISeqCons c "a" vals
-
-          ]
+              verifyISeqCons c "a" vals ]
 
 [<Tests>]
 let consIObjTests =
@@ -244,15 +227,13 @@ let consIObjTests =
         "cons.iobj tests"
         [
 
-          testCase "cons.iobj properties"
-          <| fun _ ->
-              let c1 = makeConsChain 4
-              let c2 = Cons(metaForSimpleTests, c1)
+        testCase "cons.iobj properties"
+        <| fun _ ->
+            let c1 = makeConsChain 4
+            let c2 = Cons(metaForSimpleTests, c1)
 
 
-              verifyNullMeta c1
-              verifyWithMetaHasCorrectMeta c1
-              verifyWithMetaReturnType c1 typeof<Cons>
-              verifyWithMetaNoChange c1
-
-         ]
+            verifyNullMeta c1
+            verifyWithMetaHasCorrectMeta c1
+            verifyWithMetaReturnType c1 typeof<Cons>
+            verifyWithMetaNoChange c1 ]

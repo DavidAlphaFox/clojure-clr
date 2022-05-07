@@ -90,7 +90,7 @@ type BigDecimal private (coeff, exp, precision) =
 
     // Useful info
 
-    member this.Signum() : int =
+    member this.Signum(): int =
         match this.Coefficient.Sign with
         | 0 -> 0
         | sign when sign > 0 -> 1
@@ -109,18 +109,15 @@ type BigDecimal private (coeff, exp, precision) =
 
     // Exponent support
 
-    static member checkExponent (candidate: int64) (isZero: bool) : int option =
+    static member checkExponent (candidate: int64) (isZero: bool): int option =
         match candidate with
-        | x when
-            x <= (int64 Int32.MaxValue)
-            && x >= (int64 Int32.MinValue)
-            ->
-            Some(int32 x)
+        | x when x <= (int64 Int32.MaxValue)
+                 && x >= (int64 Int32.MinValue) -> Some(int32 x)
         | x when isZero && x < 0L -> Some Int32.MinValue
         | x when isZero && x > 0L -> Some Int32.MaxValue
         | _ -> None
 
-    static member checkExponentE (candidate: int64) (isZero: bool) : int =
+    static member checkExponentE (candidate: int64) (isZero: bool): int =
         match BigDecimal.checkExponent candidate isZero with
         | Some e -> e
         | None when candidate > 0L -> raise <| ArithmeticException("Overflow in scale")
@@ -151,13 +148,9 @@ type BigDecimal private (coeff, exp, precision) =
                 | HalfUp -> (cmp r) >= 0
                 | HalfEven -> let c = (cmp r) in (c > 0) || (c = 0 && not q.IsEven)
 
-        if increment then
-            if q.Sign < 0 || (q.IsZero && x.Sign < 0) then
-                q - BigInteger.One
-            else
-                q + BigInteger.One
-        else
-            q
+        if increment
+        then if q.Sign < 0 || (q.IsZero && x.Sign < 0) then q - BigInteger.One else q + BigInteger.One
+        else q
 
     static member private round (v: BigDecimal) c =
         let vp = v.GetPrecision()
@@ -176,15 +169,12 @@ type BigDecimal private (coeff, exp, precision) =
 
             let result = BigDecimal(rounded, exp, 0u)
 
-            if c.precision > 0u then
-                BigDecimal.round result c
-            else
-                result
+            if c.precision > 0u then BigDecimal.round result c else result
 
     static member Round(v: BigDecimal, c: Context) = BigDecimal.round v c
     member x.Round(c: Context) = BigDecimal.Round(x, c)
 
-    static member Rescale(lhs: BigDecimal, newExponent, mode) : BigDecimal =
+    static member Rescale(lhs: BigDecimal, newExponent, mode): BigDecimal =
 
         let increaseExponent delta =
             // delta negative => increasing the exponent => we might have to round to a new precision
@@ -197,15 +187,11 @@ type BigDecimal private (coeff, exp, precision) =
                 let newPrecision = p - decrease
 
                 let r =
-                    lhs.Round(
-                        { precision = newPrecision
-                          roundingMode = mode }
-                    )
+                    lhs.Round
+                        ({ precision = newPrecision
+                           roundingMode = mode })
 
-                if (r.Exponent = newExponent) then
-                    r
-                else
-                    BigDecimal.Rescale(r, newExponent, mode)
+                if (r.Exponent = newExponent) then r else BigDecimal.Rescale(r, newExponent, mode)
 
         let decreaseExponent delta =
             // delta positive => decrease the exponent => multiply by 10^some power and don't underflow
@@ -223,14 +209,10 @@ type BigDecimal private (coeff, exp, precision) =
         let delta =
             BigDecimal.checkExponentE ((int64 lhs.Exponent) - (int64 newExponent)) false
 
-        if delta = 0 then
-            lhs
-        elif lhs.Coefficient.IsZero then
-            BigDecimal(BigInteger.Zero, newExponent, 0u)
-        elif delta < 0 then
-            increaseExponent delta
-        else
-            decreaseExponent (uint delta)
+        if delta = 0 then lhs
+        elif lhs.Coefficient.IsZero then BigDecimal(BigInteger.Zero, newExponent, 0u)
+        elif delta < 0 then increaseExponent delta
+        else decreaseExponent (uint delta)
 
 
     static member Quantize(lhs: BigDecimal, rhs: BigDecimal, mode: RoundingMode) =
@@ -251,7 +233,7 @@ type BigDecimal private (coeff, exp, precision) =
     //  (2) if there is an E, there must be a digit in exponent
     // I may completely redo this.  Seems more complicated than necessary, but it was a nice exercise.
 
-    static member private DoParse(buf: ReadOnlySpan<char>) : Result<BigDecimal, String> =
+    static member private DoParse(buf: ReadOnlySpan<char>): Result<BigDecimal, String> =
         let input = buf.ToArray()
 
         let inputIsEmpty posn = posn >= input.Length
@@ -266,12 +248,12 @@ type BigDecimal private (coeff, exp, precision) =
             | { Length = len; Start = posn } when isSign input.[posn] -> len - 1
             | { Length = len } -> len
 
-        let parseNonEmpty pr : Result<ParseResult, string> =
+        let parseNonEmpty pr: Result<ParseResult, string> =
             match input.Length with
             | 0 -> Error "No characters"
             | _ -> Ok pr
 
-        let parseDigits (posn: int) (leadingSignOk: bool) (noDigitsOk: bool) : Result<ParserSpan * int, string> =
+        let parseDigits (posn: int) (leadingSignOk: bool) (noDigitsOk: bool): Result<ParserSpan * int, string> =
             let leadingSignPresent =
                 not (inputIsEmpty posn) && (isSign input.[posn])
 
@@ -279,27 +261,23 @@ type BigDecimal private (coeff, exp, precision) =
                 Error "Misplaced +/-"
             else
                 let startPosn =
-                    if leadingSignPresent then
-                        posn + 1
-                    else
-                        posn
+                    if leadingSignPresent then posn + 1 else posn
 
                 let mutable i = startPosn
 
                 while i < input.Length && Char.IsDigit(input.[i]) do // TODO: use a sequence function for this.
                     i <- i + 1
 
-                if i = startPosn && not noDigitsOk then
-                    Error "missing digits"
-                else
-                    Ok({ Start = posn; Length = i - posn }, i)
+                if i = startPosn && not noDigitsOk
+                then Error "missing digits"
+                else Ok({ Start = posn; Length = i - posn }, i)
 
-        let parseWhole (ParseResult (data, posn)) : Result<ParseResult, string> =
+        let parseWhole (ParseResult (data, posn)): Result<ParseResult, string> =
             match (parseDigits posn true true) with
             | Ok (span, nextPosn) -> Ok(ParseResult({ data with wholePart = span }, nextPosn))
             | Error msg -> Error msg
 
-        let parseFraction (ParseResult (data, posn) as pr) : Result<ParseResult, string> =
+        let parseFraction (ParseResult (data, posn) as pr): Result<ParseResult, string> =
             if inputIsEmpty posn || input.[posn] <> '.' then
                 Ok pr
             else
@@ -308,7 +286,7 @@ type BigDecimal private (coeff, exp, precision) =
                 | Error msg -> Error msg
 
 
-        let parseExponent (ParseResult (data, posn) as pr) : Result<ParseResult, string> =
+        let parseExponent (ParseResult (data, posn) as pr): Result<ParseResult, string> =
             if inputIsEmpty posn
                || (input.[posn] <> 'E' && input.[posn] <> 'e') then
                 Ok pr
@@ -317,18 +295,12 @@ type BigDecimal private (coeff, exp, precision) =
                 | Ok (span, nextPosn) -> Ok(ParseResult({ data with exponent = span }, nextPosn))
                 | Error msg -> Error "No digits in coefficient"
 
-        let parseEmpty (ParseResult (data, posn) as pr) : Result<ParseResult, string> =
-            if inputIsEmpty posn then
-                Ok pr
-            else
-                Error "Unused characters at end"
+        let parseEmpty (ParseResult (data, posn) as pr): Result<ParseResult, string> =
+            if inputIsEmpty posn then Ok pr else Error "Unused characters at end"
 
-        let parseConsistencyChecks (ParseResult (data, posn) as pr) : Result<ParseResult, string> =
+        let parseConsistencyChecks (ParseResult (data, posn) as pr): Result<ParseResult, string> =
             let numWholePartDigits =
-                if isSign input.[0] then
-                    data.wholePart.Length - 1
-                else
-                    data.wholePart.Length
+                if isSign input.[0] then data.wholePart.Length - 1 else data.wholePart.Length
 
             if numWholePartDigits = 0
                && data.fractionPart.Length = 0 then
@@ -344,10 +316,7 @@ type BigDecimal private (coeff, exp, precision) =
                 && isSign input.[span.Start]
 
             let (skip, maxCount) =
-                if hasLeadingSign then
-                    (span.Start + 1, span.Length - 1)
-                else
-                    (span.Start, span.Length)
+                if hasLeadingSign then (span.Start + 1, span.Length - 1) else (span.Start, span.Length)
 
             let found =
                 input
@@ -372,14 +341,10 @@ type BigDecimal private (coeff, exp, precision) =
             match data.exponent.Length with
             | 0 -> Ok 0
             | _ ->
-                match
-                    Int32.TryParse
-                        (
-                            (new ReadOnlySpan<char>(input, data.exponent.Start, data.exponent.Length)),
-                            NumberStyles.AllowLeadingSign,
-                            CultureInfo.InvariantCulture
-                        )
-                    with
+                match Int32.TryParse
+                          ((new ReadOnlySpan<char>(input, data.exponent.Start, data.exponent.Length)),
+                           NumberStyles.AllowLeadingSign,
+                           CultureInfo.InvariantCulture) with
                 | true, i -> Ok i
                 | _ -> Error "Invalid exponent"
 
@@ -394,7 +359,7 @@ type BigDecimal private (coeff, exp, precision) =
                 | None -> Error "Invalid exponent"
             | Error msg as v -> Error msg
 
-        let constructBD (data: ParseData) : Result<BigDecimal, string> =
+        let constructBD (data: ParseData): Result<BigDecimal, string> =
             let digits =
                 Array.zeroCreate (data.wholePart.Length + data.fractionPart.Length)
 
@@ -408,10 +373,7 @@ type BigDecimal private (coeff, exp, precision) =
                 - leadingZeroCount (data)
 
             let precision =
-                if precision = 0 || bi.IsZero then
-                    1
-                else
-                    precision
+                if precision = 0 || bi.IsZero then 1 else precision
 
             match computeExponent data bi.IsZero with
             | Ok exp -> Ok(BigDecimal(bi, exp, uint precision))
@@ -435,20 +397,18 @@ type BigDecimal private (coeff, exp, precision) =
         | Error x -> Error x
         | Ok (ParseResult (data, b)) as pr -> constructBD data
 
-    static member private DoParseE(buf: ReadOnlySpan<char>) : BigDecimal =
+    static member private DoParseE(buf: ReadOnlySpan<char>): BigDecimal =
         match BigDecimal.DoParse buf with
         | Ok bd -> bd
         | Error x -> invalidArg "input" x
 
     static member Parse(s: String) = BigDecimal.DoParseE(s.AsSpan())
 
-    static member Parse(s: String, c) =
-        BigDecimal.round (BigDecimal.Parse(s)) c
+    static member Parse(s: String, c) = BigDecimal.round (BigDecimal.Parse(s)) c
 
     static member Parse(s: ReadOnlySpan<char>) = BigDecimal.DoParseE(s)
 
-    static member Parse(s: ReadOnlySpan<char>, c) =
-        BigDecimal.round (BigDecimal.Parse(s)) c
+    static member Parse(s: ReadOnlySpan<char>, c) = BigDecimal.round (BigDecimal.Parse(s)) c
 
     // Kept the following for backwards compatibility, don't really need now that we have spans.
 
@@ -463,28 +423,28 @@ type BigDecimal private (coeff, exp, precision) =
     static member Parse(v: char array, offset: int, len: int, c) =
         BigDecimal.round (BigDecimal.Create(v, offset, len)) c
 
-    static member TryParse(s: String, value: outref<BigDecimal>) : bool =
+    static member TryParse(s: String, value: outref<BigDecimal>): bool =
         match BigDecimal.DoParse(s.AsSpan()) with
         | Ok bd ->
             value <- bd
             true
         | Error _ -> false
 
-    static member TryParse(s: String, c, value: outref<BigDecimal>) : bool =
+    static member TryParse(s: String, c, value: outref<BigDecimal>): bool =
         match BigDecimal.DoParse(s.AsSpan()) with
         | Ok bd ->
             value <- BigDecimal.round bd c
             true
         | Error _ -> false
 
-    static member TryParse(s: ReadOnlySpan<char>, value: outref<BigDecimal>) : bool =
+    static member TryParse(s: ReadOnlySpan<char>, value: outref<BigDecimal>): bool =
         match BigDecimal.DoParse(s) with
         | Ok bd ->
             value <- bd
             true
         | Error _ -> false
 
-    static member TryParse(s: ReadOnlySpan<char>, c, value: outref<BigDecimal>) : bool =
+    static member TryParse(s: ReadOnlySpan<char>, c, value: outref<BigDecimal>): bool =
         match BigDecimal.DoParse(s) with
         | Ok bd ->
             value <- BigDecimal.round bd c
@@ -493,28 +453,28 @@ type BigDecimal private (coeff, exp, precision) =
 
     // Kept the following for backwards compatibility, don't really need now that we have spans.
 
-    static member TryParse(a: char array, value: outref<BigDecimal>) : bool =
+    static member TryParse(a: char array, value: outref<BigDecimal>): bool =
         match BigDecimal.DoParse(ReadOnlySpan(a)) with
         | Ok bd ->
             value <- bd
             true
         | Error _ -> false
 
-    static member TryParse(a: char array, c, value: outref<BigDecimal>) : bool =
+    static member TryParse(a: char array, c, value: outref<BigDecimal>): bool =
         match BigDecimal.DoParse(ReadOnlySpan(a)) with
         | Ok bd ->
             value <- BigDecimal.round bd c
             true
         | Error _ -> false
 
-    static member TryParse(a: char array, offset: int, len: int, value: outref<BigDecimal>) : bool =
+    static member TryParse(a: char array, offset: int, len: int, value: outref<BigDecimal>): bool =
         match BigDecimal.DoParse(ReadOnlySpan(a, offset, len)) with
         | Ok bd ->
             value <- bd
             true
         | Error _ -> false
 
-    static member TryParse(a: char array, offset: int, len: int, c, value: outref<BigDecimal>) : bool =
+    static member TryParse(a: char array, offset: int, len: int, c, value: outref<BigDecimal>): bool =
         match BigDecimal.DoParse(ReadOnlySpan(a, offset, len)) with
         | Ok bd ->
             value <- BigDecimal.round bd c
@@ -559,11 +519,11 @@ type BigDecimal private (coeff, exp, precision) =
         BigDecimal.round (BigDecimal.Create(v)) c
 
     static member Create(v: double) =
-        if Double.IsNaN(v) then
-            invalidArg "value" "NaN is not supported in BigDecimal"
+        if Double.IsNaN(v)
+        then invalidArg "value" "NaN is not supported in BigDecimal"
 
-        if Double.IsInfinity(v) then
-            invalidArg "value" "Infinity is not supported in BigDecimal"
+        if Double.IsInfinity(v)
+        then invalidArg "value" "Infinity is not supported in BigDecimal"
 
         //let dbytes = BitConverter.GetBytes(v)
         //let signficand = ArithmeticHelpers.getDoubleSignificand dbytes
@@ -598,16 +558,9 @@ type BigDecimal private (coeff, exp, precision) =
         | ArithmeticHelpers.DoubleData.Standard (isPositive = p; mantissa = m; exponent = e; isSignificandZero = z) ->
             let coeff, leftShift =
                 if z then
-                    ((if p then
-                          BigInteger.One
-                      else
-                          BigInteger.MinusOne),
-                     e)
+                    ((if p then BigInteger.One else BigInteger.MinusOne), e)
                 else
-                    ((if p then
-                          BigInteger(m)
-                      else
-                          BigInteger.Negate(BigInteger(m))),
+                    ((if p then BigInteger(m) else BigInteger.Negate(BigInteger(m))),
                      e - ArithmeticHelpers.doubleSignificandBitLength)
 
             let coeffToUse, expToUse =
@@ -642,10 +595,7 @@ type BigDecimal private (coeff, exp, precision) =
         let sb = StringBuilder(coeff.ToString())
 
         let coeffLen, negOffset =
-            if coeff.Sign < 0 then
-                (sb.Length - 1, 1)
-            else
-                (sb.Length, 0)
+            if coeff.Sign < 0 then (sb.Length - 1, 1) else (sb.Length, 0)
 
         let adjustedExp = (int64 exp) + (int64 coeffLen) - 1L
 
@@ -663,19 +613,17 @@ type BigDecimal private (coeff, exp, precision) =
             else
                 ()
         else
-            if coeffLen > 1 then
-                sb.Insert(negOffset + 1, '.') |> ignore
+            if coeffLen > 1 then sb.Insert(negOffset + 1, '.') |> ignore
 
             sb.Append('E') |> ignore
 
-            if adjustedExp >= 0L then
-                sb.Append('+') |> ignore
+            if adjustedExp >= 0L then sb.Append('+') |> ignore
 
             sb.Append(adjustedExp) |> ignore
 
         sb.ToString()
 
-    override this.ToString() : String = this.ToScientificString()
+    override this.ToString(): String = this.ToScientificString()
 
 
     // support for some of the arithmetic operations
@@ -684,21 +632,17 @@ type BigDecimal private (coeff, exp, precision) =
     static member private computeAlign (big: BigDecimal) (small: BigDecimal) =
         let deltaExp = (big.Exponent - small.Exponent) |> uint
 
-        BigDecimal(
-            big.Coefficient
-            * ArithmeticHelpers.biPowerOfTen (deltaExp),
-            small.Exponent,
-            0u
-        )
+        BigDecimal
+            (big.Coefficient
+             * ArithmeticHelpers.biPowerOfTen (deltaExp),
+             small.Exponent,
+             0u)
 
     /// Create matching pair with the same alignment (exponent)
     static member private align (x: BigDecimal) (y: BigDecimal) =
-        if y.Exponent > x.Exponent then
-            (x, BigDecimal.computeAlign y x)
-        elif x.Exponent > y.Exponent then
-            (BigDecimal.computeAlign x y, y)
-        else
-            (x, y)
+        if y.Exponent > x.Exponent then (x, BigDecimal.computeAlign y x)
+        elif x.Exponent > y.Exponent then (BigDecimal.computeAlign x y, y)
+        else (x, y)
 
 
     //////////////////////////////////
@@ -719,29 +663,26 @@ type BigDecimal private (coeff, exp, precision) =
 
     interface IEquatable<BigDecimal> with
         member this.Equals(y: BigDecimal) =
-            if this.Exponent <> y.Exponent then
-                false
-            else
-                this.Coefficient.Equals(y.Coefficient)
+            if this.Exponent <> y.Exponent then false else this.Coefficient.Equals(y.Coefficient)
 
-    static member op_LessThan(left: BigDecimal, right: BigDecimal) : bool =
+    static member op_LessThan(left: BigDecimal, right: BigDecimal): bool =
         (left :> IComparable<BigDecimal>).CompareTo(right) < 0
 
-    static member op_LessThanOrEqual(left: BigDecimal, right: BigDecimal) : bool =
+    static member op_LessThanOrEqual(left: BigDecimal, right: BigDecimal): bool =
         (left :> IComparable<BigDecimal>).CompareTo(right)
         <= 0
 
-    static member op_GreaterThan(left: BigDecimal, right: BigDecimal) : bool =
+    static member op_GreaterThan(left: BigDecimal, right: BigDecimal): bool =
         (left :> IComparable<BigDecimal>).CompareTo(right) > 0
 
-    static member op_GreaterThanOrEqual(left: BigDecimal, right: BigDecimal) : bool =
+    static member op_GreaterThanOrEqual(left: BigDecimal, right: BigDecimal): bool =
         (left :> IComparable<BigDecimal>).CompareTo(right)
         >= 0
 
-    static member op__Equality(left: BigDecimal, right: BigDecimal) : bool =
+    static member op__Equality(left: BigDecimal, right: BigDecimal): bool =
         (left :> IEquatable<BigDecimal>).Equals(right)
 
-    static member op_Inequality(left: BigDecimal, right: BigDecimal) : bool =
+    static member op_Inequality(left: BigDecimal, right: BigDecimal): bool =
         (left :> IEquatable<BigDecimal>).Equals(right)
 
     override this.Equals(obj) =
@@ -760,11 +701,7 @@ type BigDecimal private (coeff, exp, precision) =
 
     member this.ToBigInteger() =
         BigDecimal
-            .Rescale(
-                this,
-                0,
-                RoundingMode.Down
-            )
+            .Rescale(this, 0, RoundingMode.Down)
             .Coefficient
 
     interface IConvertible with
@@ -786,12 +723,7 @@ type BigDecimal private (coeff, exp, precision) =
         member this.ToDouble(fp: IFormatProvider) =
             try
                 Double.Parse(this.ToString(), fp)
-            with
-            | :? OverflowException ->
-                if this.IsNegative then
-                    Double.NegativeInfinity
-                else
-                    Double.PositiveInfinity
+            with :? OverflowException -> if this.IsNegative then Double.NegativeInfinity else Double.PositiveInfinity
 
 
         member this.ToInt16(_: IFormatProvider) = this.ToBigInteger() |> int16
@@ -816,10 +748,9 @@ type BigDecimal private (coeff, exp, precision) =
     // Negation
 
     member this.Negate() =
-        if this.Coefficient.IsZero then
-            this
-        else
-            BigDecimal(BigInteger.Negate(this.Coefficient), this.Exponent, this.RawPrecision)
+        if this.Coefficient.IsZero
+        then this
+        else BigDecimal(BigInteger.Negate(this.Coefficient), this.Exponent, this.RawPrecision)
 
     member this.Negate(c) = BigDecimal.round (this.Negate()) c
     static member Negate(x: BigDecimal) = x.Negate()
@@ -829,16 +760,10 @@ type BigDecimal private (coeff, exp, precision) =
     // Absolute value
 
     member this.Abs() =
-        if this.Coefficient.Sign < 0 then
-            this.Negate()
-        else
-            this
+        if this.Coefficient.Sign < 0 then this.Negate() else this
 
     member this.Abs(c) =
-        if this.Coefficient.Sign < 0 then
-            this.Negate(c)
-        else
-            BigDecimal.round this c
+        if this.Coefficient.Sign < 0 then this.Negate(c) else BigDecimal.round this c
 
     static member Abs(x: BigDecimal) = x.Abs()
     static member Abs(x: BigDecimal, c) = x.Abs(c)
@@ -917,10 +842,7 @@ type BigDecimal private (coeff, exp, precision) =
                     BigDecimal.checkExponentE ((int64 bd.Exponent) + 1L) quo.IsZero
 
                 let newPrec =
-                    if bd.RawPrecision > 0u then
-                        bd.RawPrecision - 1u
-                    else
-                        bd.RawPrecision
+                    if bd.RawPrecision > 0u then bd.RawPrecision - 1u else bd.RawPrecision
 
                 BigDecimal.stripZerosToMatchExponent (BigDecimal(quo, newExp, newPrec)) preferredExp
             else
@@ -1005,28 +927,23 @@ type BigDecimal private (coeff, exp, precision) =
                 let y = rhs.Coefficient
 
                 let xtest =
-                    BigInteger.Abs(
-                        if xprec < yprec then
+                    BigInteger.Abs
+                        (if xprec < yprec then
                             x
                             * ArithmeticHelpers.biPowerOfTen (uint (yprec - xprec))
-                        else
-                            x
-                    )
+                         else
+                             x)
 
                 let ytest =
-                    BigInteger.Abs(
-                        if xprec > yprec then
+                    BigInteger.Abs
+                        (if xprec > yprec then
                             y
                             * ArithmeticHelpers.biPowerOfTen (uint (xprec - yprec))
-                        else
-                            y
-                    )
+                         else
+                             y)
 
                 let yAdjusted, adjust =
-                    if (ytest < xtest) then
-                        y * ArithmeticHelpers.biTen, 1
-                    else
-                        y, 0
+                    if (ytest < xtest) then y * ArithmeticHelpers.biTen, 1 else y, 0
 
                 // Now make sure x and y themselves are in the proper range.
 
@@ -1052,10 +969,8 @@ type BigDecimal private (coeff, exp, precision) =
                 // Thanks to the OpenJDK implementation for pointing this out.
                 // TODO: Have ROundingDivide2 return a flag indicating if the remainder is 0.  Then we can lose the multiply.
 
-                if
-                    (result.Multiply(rhs) :> IComparable<BigDecimal>)
-                        .CompareTo(lhs) = 0
-                then
+                if (result.Multiply(rhs) :> IComparable<BigDecimal>)
+                    .CompareTo(lhs) = 0 then
                     BigDecimal.stripZerosToMatchExponent result preferredExp // Apply preferred scale rules for exact quotients
                 else
                     result
@@ -1095,11 +1010,10 @@ type BigDecimal private (coeff, exp, precision) =
                 raise <| ArithmeticException("Division by zero") // INF
 
         let preferredExp =
-            Math.Max(
-                (int64 Int32.MinValue),
-                Math.Min(int64 Int32.MaxValue, int64 dividend.Exponent)
-                - (int64 divisor.Exponent)
-            )
+            Math.Max
+                ((int64 Int32.MinValue),
+                 Math.Min(int64 Int32.MaxValue, int64 dividend.Exponent)
+                 - (int64 divisor.Exponent))
             |> int32
 
         if dividend.Coefficient.IsZero then
@@ -1127,8 +1041,7 @@ type BigDecimal private (coeff, exp, precision) =
             let quotient =
                 try
                     dividend.Divide(divisor, c)
-                with
-                | :? ArithmeticException ->
+                with :? ArithmeticException ->
                     raise
                     <| ArithmeticException("Non-terminating decimal expansion; no exact representable decimal result.")
 
@@ -1137,13 +1050,12 @@ type BigDecimal private (coeff, exp, precision) =
             // the desired one by removing trailing zeros; since the
             // exact divide method does not have an explicit digit
             // limit, we can add zeros too.
-            if preferredExp < qExp then
-                BigDecimal.Rescale(quotient, preferredExp, RoundingMode.Unnecessary)
-            else
-                quotient
+            if preferredExp < qExp
+            then BigDecimal.Rescale(quotient, preferredExp, RoundingMode.Unnecessary)
+            else quotient
 
 
-    member this.DivideInteger(y: BigDecimal) : BigDecimal =
+    member this.DivideInteger(y: BigDecimal): BigDecimal =
         // I am indebted to the OpenJDK implementation for the algorithm.
         // However, the spec I'm working from specifies an exponent of zero always.
         // The OpenJDK implementation does otherwise.
@@ -1154,9 +1066,8 @@ type BigDecimal private (coeff, exp, precision) =
 
         let preferredExp = 0
 
-        if
-            (this.Abs() :> IComparable<BigDecimal>).CompareTo(y.Abs()) < 0
-        then
+        if (this.Abs() :> IComparable<BigDecimal>)
+            .CompareTo(y.Abs()) < 0 then
             BigDecimal(BigInteger.Zero, preferredExp, 0u)
         elif this.Coefficient.IsZero
              && not y.Coefficient.IsZero then
@@ -1167,13 +1078,12 @@ type BigDecimal private (coeff, exp, precision) =
 
 
             let maxDigits =
-                Math.Min(
-                    (int64 this.Precision)
-                    + (int64 (Math.Ceiling(10.0 * (float y.Precision) / 3.0)))
-                    + Math.Abs((int64 this.Exponent) - (int64 y.Exponent))
-                    + 2L,
-                    (int64 Int32.MaxValue)
-                )
+                Math.Min
+                    ((int64 this.Precision)
+                     + (int64 (Math.Ceiling(10.0 * (float y.Precision) / 3.0)))
+                     + Math.Abs((int64 this.Exponent) - (int64 y.Exponent))
+                     + 2L,
+                     (int64 Int32.MaxValue))
                 |> int
 
             let quotient =
@@ -1188,14 +1098,13 @@ type BigDecimal private (coeff, exp, precision) =
                     quotient
 
             let quotient =
-                if quotient.Exponent > preferredExp then
-                    BigDecimal.Rescale(quotient, preferredExp, RoundingMode.Unnecessary) // pad with zeros if nesary
-                else
-                    quotient
+                if quotient.Exponent > preferredExp
+                then BigDecimal.Rescale(quotient, preferredExp, RoundingMode.Unnecessary) // pad with zeros if nesary
+                else quotient
 
             quotient
 
-    member this.DivideInteger(y: BigDecimal, c: Context) : BigDecimal =
+    member this.DivideInteger(y: BigDecimal, c: Context): BigDecimal =
         // I am indebted to the OpenJDK implementation for the algorithm.
         // However, the spec I'm working from specifies an exponent of zero always.
         // The OpenJDK implementation does otherwise.
@@ -1235,11 +1144,9 @@ type BigDecimal private (coeff, exp, precision) =
                     let product = result.Multiply(y)
                     // If the quotient is the full integer value,
                     // |dividend-product| < |divisor|.
-                    if
-                        (this.Subtract(product).Abs() :> IComparable<BigDecimal>)
-                            .CompareTo(y.Abs())
-                        >= 0
-                    then
+                    if (this.Subtract(product).Abs() :> IComparable<BigDecimal>)
+                           .CompareTo(y.Abs())
+                       >= 0 then
                         raise <| ArithmeticException("Diision impossible")
                     else
                         result
@@ -1269,13 +1176,13 @@ type BigDecimal private (coeff, exp, precision) =
     // though that Math.Max looks like it alwasy taked precisionDiff because it is positive and the other expression is negative.
     // But that's what my old code comment had.
 
-    member this.DivRem(y: BigDecimal, remainder: outref<BigDecimal>) : BigDecimal =
+    member this.DivRem(y: BigDecimal, remainder: outref<BigDecimal>): BigDecimal =
         // x = q * y + r
         let q = this.DivideInteger(y)
         remainder <- this - q * y
         q
 
-    member this.DivRem(y: BigDecimal, c: Context, remainder: outref<BigDecimal>) : BigDecimal =
+    member this.DivRem(y: BigDecimal, c: Context, remainder: outref<BigDecimal>): BigDecimal =
         // x = q * y + r
         if c.roundingMode = RoundingMode.Unnecessary then
             this.DivRem(y, &remainder)
@@ -1284,17 +1191,17 @@ type BigDecimal private (coeff, exp, precision) =
             remainder <- this - q * y
             q
 
-    member this.Mod(y: BigDecimal) : BigDecimal = let _, r = this.DivRem(y) in r
-    member this.Mod(y: BigDecimal, c: Context) : BigDecimal = let _, r = this.DivRem(y, c) in r
-    static member Divide(x: BigDecimal, y: BigDecimal) : BigDecimal = x.Divide(y)
-    static member Divide(x: BigDecimal, y: BigDecimal, c: Context) : BigDecimal = x.Divide(y, c)
-    static member Mod(x: BigDecimal, y: BigDecimal) : BigDecimal = x.Mod(y)
-    static member Mod(x: BigDecimal, y: BigDecimal, c: Context) : BigDecimal = x.Mod(y, c)
+    member this.Mod(y: BigDecimal): BigDecimal = let _, r = this.DivRem(y) in r
+    member this.Mod(y: BigDecimal, c: Context): BigDecimal = let _, r = this.DivRem(y, c) in r
+    static member Divide(x: BigDecimal, y: BigDecimal): BigDecimal = x.Divide(y)
+    static member Divide(x: BigDecimal, y: BigDecimal, c: Context): BigDecimal = x.Divide(y, c)
+    static member Mod(x: BigDecimal, y: BigDecimal): BigDecimal = x.Mod(y)
+    static member Mod(x: BigDecimal, y: BigDecimal, c: Context): BigDecimal = x.Mod(y, c)
 
-    static member DivRem(x: BigDecimal, y: BigDecimal, remainder: outref<BigDecimal>) : BigDecimal =
+    static member DivRem(x: BigDecimal, y: BigDecimal, remainder: outref<BigDecimal>): BigDecimal =
         x.DivRem(y, &remainder)
 
-    static member DivRem(x: BigDecimal, y: BigDecimal, c: Context, remainder: outref<BigDecimal>) : BigDecimal =
+    static member DivRem(x: BigDecimal, y: BigDecimal, c: Context, remainder: outref<BigDecimal>): BigDecimal =
         x.DivRem(y, c, &remainder)
 
     static member (/)(x: BigDecimal, y: BigDecimal) = x.Divide(y)
@@ -1304,15 +1211,15 @@ type BigDecimal private (coeff, exp, precision) =
     // Exponentiation
 
     member this.Power(n: int) =
-        if n < 0 || n > 999999999 then
-            invalidArg "n" "Exponent must be between 0 and 999999999"
+        if n < 0 || n > 999999999
+        then invalidArg "n" "Exponent must be between 0 and 999999999"
 
         let exp =
             BigDecimal.checkExponentE ((int64 this.Exponent) * (int64 n)) this.Coefficient.IsZero
 
         BigDecimal(BigInteger.Pow(this.Coefficient, n), exp, 0u)
 
-    member this.Power(n: int, c: Context) : BigDecimal =
+    member this.Power(n: int, c: Context): BigDecimal =
         // Following the OpenJDK implementation.
         // This is an implementation of the X3.274-1996 algorithm:
         // - An ArithmeticException exception is thrown if
@@ -1356,42 +1263,38 @@ type BigDecimal private (coeff, exp, precision) =
             // I suppose I could encapsulate this as a tail-recursive function. Another day
             let mutable acc = BigDecimal.One
             let mutable bitSeen = false
-
             for i = 1 to 31 do
                 mag <- mag + mag // shift left 1 bit
 
-                if mag < 0 // top bit is set
-                then
+                if mag < 0 then // top bit is set
                     bitSeen <- true
                     acc <- acc.Multiply(this, workC) // acc = acc*x
 
-                if i <> 31 && bitSeen // not the last bit
-                then
-                    acc <- acc.Multiply(acc, workC) // acc = acc*acc [square]
+                if i <> 31 && bitSeen then acc <-  // not the last bit
+                    acc.Multiply(acc, workC) // acc = acc*acc [square]
 
             // if negative n, calculate the reciprocal using working precision
-            if n < 0 then
-                acc <- BigDecimal.One.Divide(acc, workC)
+            if n < 0 then acc <- BigDecimal.One.Divide(acc, workC)
             // round to final precision and strip zeros
             BigDecimal.round acc c
 
-    static member Power(x: BigDecimal, n: int) : BigDecimal = x.Power(n)
-    static member Power(x: BigDecimal, n: int, c: Context) : BigDecimal = x.Power(n, c)
+    static member Power(x: BigDecimal, n: int): BigDecimal = x.Power(n)
+    static member Power(x: BigDecimal, n: int, c: Context): BigDecimal = x.Power(n, c)
 
 
     // Shift operations
 
-    member this.MovePointRight(n: int) : BigDecimal =
+    member this.MovePointRight(n: int): BigDecimal =
         let newExp =
             BigDecimal.checkExponentE ((int64 this.Exponent) + (int64 n)) this.Coefficient.IsZero
 
         BigDecimal(this.Coefficient, newExp, this.RawPrecision)
 
-    member this.MovePointLeft(n: int) : BigDecimal =
+    member this.MovePointLeft(n: int): BigDecimal =
         let newExp =
             BigDecimal.checkExponentE ((int64 this.Exponent) - (int64 n)) this.Coefficient.IsZero
 
         BigDecimal(this.Coefficient, newExp, this.RawPrecision)
 
-    static member (<<<)(x: BigDecimal, shift: int) : BigDecimal = x.MovePointLeft(shift)
-    static member (>>>)(x: BigDecimal, shift: int) : BigDecimal = x.MovePointRight(shift)
+    static member (<<<)(x: BigDecimal, shift: int): BigDecimal = x.MovePointLeft(shift)
+    static member (>>>)(x: BigDecimal, shift: int): BigDecimal = x.MovePointRight(shift)

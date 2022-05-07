@@ -63,13 +63,9 @@ let primaryConstructorTests =
 
           testCase "Should fail if denominator is zero"
           <| fun _ ->
-              Expect.throwsT<DivideByZeroException>
-                  (fun f ->
-                      BigRational(BigInteger.One, BigInteger.Zero)
-                      |> ignore)
-                  "Fail if denominator is zero"
-
-          ]
+              Expect.throwsT<DivideByZeroException> (fun f ->
+                  BigRational(BigInteger.One, BigInteger.Zero)
+                  |> ignore) "Fail if denominator is zero" ]
 
 
 // create from int
@@ -85,10 +81,9 @@ let simpleIntTest (i: int) =
 
 let createIntTests data =
     data
-    |> List.map
-        (fun i ->
-            testCase (sprintf "creating from integer %i" i)
-            <| fun _ -> simpleIntTest i)
+    |> List.map (fun i ->
+        testCase (sprintf "creating from integer %i" i)
+        <| fun _ -> simpleIntTest i)
 
 let basicIntConstructionTests = [ 0; 1; -1; 5; -5 ]
 
@@ -105,10 +100,9 @@ let simpleDecimalTest (d: decimal) (s: string) =
 
 let createDecimalTests data =
     data
-    |> List.map
-        (fun (d, s) ->
-            testCase (sprintf "creating from decimal %s" (d.ToString()))
-            <| fun _ -> simpleDecimalTest d s)
+    |> List.map (fun (d, s) ->
+        testCase (sprintf "creating from decimal %s" (d.ToString()))
+        <| fun _ -> simpleDecimalTest d s)
 
 let basicDecimalConstructionTests =
     [ (0.0M, "0/1")
@@ -135,10 +129,9 @@ let simpleParseTest (inStr: string) (outStr: string) =
 
 let createParseTests data =
     data
-    |> List.map
-        (fun (inStr, outStr) ->
-            testCase (sprintf "parsing %s as %s" inStr outStr)
-            <| fun _ -> simpleParseTest inStr outStr)
+    |> List.map (fun (inStr, outStr) ->
+        testCase (sprintf "parsing %s as %s" inStr outStr)
+        <| fun _ -> simpleParseTest inStr outStr)
 
 let basicParseTests =
     [ ("0", "0/1")
@@ -166,10 +159,9 @@ let simpleNegateTest (inStr: string) (outStr: string) =
 
 let createNegateTests data =
     data
-    |> List.map
-        (fun (inStr, outStr) ->
-            testCase (sprintf "parsing %s as %s" inStr outStr)
-            <| fun _ -> simpleNegateTest inStr outStr)
+    |> List.map (fun (inStr, outStr) ->
+        testCase (sprintf "parsing %s as %s" inStr outStr)
+        <| fun _ -> simpleNegateTest inStr outStr)
 
 let basicNegateTests =
     [ ("0", "0/1")
@@ -196,10 +188,9 @@ let simpleAbsTest (inStr: string) (outStr: string) =
 
 let createAbsTests data =
     data
-    |> List.map
-        (fun (inStr, outStr) ->
-            testCase (sprintf "parsing %s as %s" inStr outStr)
-            <| fun _ -> simpleAbsTest inStr outStr)
+    |> List.map (fun (inStr, outStr) ->
+        testCase (sprintf "parsing %s as %s" inStr outStr)
+        <| fun _ -> simpleAbsTest inStr outStr)
 
 let basicAbsTests =
     [ ("0", "0/1")
@@ -229,12 +220,11 @@ let simpleAddTest (lhs: string) (rhs: string) (result: string) =
 
 let createAddTests data =
     data
-    |> List.map
-        (fun (lhs, rhs, result) ->
-            testCase (sprintf "Adding %s to %s" lhs rhs)
-            <| fun _ -> simpleAddTest lhs rhs result
+    |> List.map (fun (lhs, rhs, result) ->
+        testCase (sprintf "Adding %s to %s" lhs rhs)
+        <| fun _ -> simpleAddTest lhs rhs result
 
-            )
+        )
 
 let basicAddTests =
     [ ("0", "1/2", "1/2")
@@ -265,12 +255,11 @@ let simpleSubTest (lhs: string) (rhs: string) (result: string) =
 
 let createSubTests data =
     data
-    |> List.map
-        (fun (lhs, rhs, result) ->
-            testCase (sprintf "subtracting %s from %s" rhs lhs)
-            <| fun _ -> simpleSubTest lhs rhs result
+    |> List.map (fun (lhs, rhs, result) ->
+        testCase (sprintf "subtracting %s from %s" rhs lhs)
+        <| fun _ -> simpleSubTest lhs rhs result
 
-            )
+        )
 
 let basicSubTests =
     [ ("0", "1/2", "-1/2")

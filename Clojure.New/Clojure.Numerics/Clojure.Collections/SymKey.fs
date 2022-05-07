@@ -22,31 +22,27 @@ type Symbol private (meta: IPersistentMap, ns: string, name: string) =
     static member intern(nsname: string) =
         let i = nsname.IndexOf('/')
 
-        if i = -1 || nsname.Equals("/") then
-            Symbol(null, nsname)
-        else
-            Symbol(nsname.Substring(0, i), nsname.Substring(i + 1))
+        if i = -1 || nsname.Equals("/")
+        then Symbol(null, nsname)
+        else Symbol(nsname.Substring(0, i), nsname.Substring(i + 1))
 
     // JVM comment: the create thunks preserve binary compatibility with code compiled
     // JVM comment: against earlier version of Clojure and can be removed (at some point).
     // So I'm leaving them out.
-    static member create(ns, name) : Symbol = Symbol.intern (ns, name)
-    static member create(nsname) : Symbol = Symbol.intern (nsname)
+    static member create(ns, name): Symbol = Symbol.intern (ns, name)
+    static member create(nsname): Symbol = Symbol.intern (nsname)
 
     override _.ToString() =
         match toStringCached with
         | Some s -> s
         | None ->
             let s =
-                if ns = null then
-                    name
-                else
-                    ns + "/" + name
+                if ns = null then name else ns + "/" + name
 
             toStringCached <- Some s
             s
 
-    override this.Equals(o: obj) : bool =
+    override this.Equals(o: obj): bool =
         match o with
         | _ when Object.ReferenceEquals(this, o) -> true
         | :? Symbol as s -> Util.equals (ns, s.NS) && name.Equals(s.Name)
@@ -71,10 +67,7 @@ type Symbol private (meta: IPersistentMap, ns: string, name: string) =
 
     interface IObj with
         member this.withMeta(m: IPersistentMap) =
-            if Object.ReferenceEquals(meta, m) then
-                upcast this
-            else
-                upcast Symbol(m, ns, name)
+            if Object.ReferenceEquals(meta, m) then upcast this else upcast Symbol(m, ns, name)
 
     interface Named with
         member x.getNamespace() = ns
@@ -96,10 +89,7 @@ type Symbol private (meta: IPersistentMap, ns: string, name: string) =
                 else
                     let nsc = ns.CompareTo(s.NS)
 
-                    if nsc <> 0 then
-                        nsc
-                    else
-                        name.CompareTo(s.Name)
+                    if nsc <> 0 then nsc else name.CompareTo(s.Name)
             else
                 name.CompareTo(s.Name)
 
@@ -125,7 +115,7 @@ type Symbol private (meta: IPersistentMap, ns: string, name: string) =
 type Keyword private (sym: Symbol) =
     inherit AFn()
 
-    let hasheq = (sym :> IHashEq).hasheq () + 0x9e3779b9
+    let hasheq = (sym :> IHashEq).hasheq() + 0x9e3779b9
 
     [<NonSerialized>]
     let mutable toStringCached: String option = None
@@ -138,10 +128,7 @@ type Keyword private (sym: Symbol) =
 
     static member intern(s) =
         let useSym s =
-            if (s :> IMeta).meta () |> isNull then
-                s
-            else
-                downcast (s :> IObj).withMeta (null)
+            if (s :> IMeta).meta() |> isNull then s else downcast (s :> IObj).withMeta(null)
 
         let exists, wref = Keyword.symKeyMap.TryGetValue(s)
 

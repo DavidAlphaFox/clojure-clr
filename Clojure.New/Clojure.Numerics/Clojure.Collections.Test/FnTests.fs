@@ -33,9 +33,7 @@ let boundedLengthTests =
               Expect.equal (AFn.boundedLength (c, 20)) (c.count ()) "under limit on conses should be seq count"
 
           testCase "boundedLength on null should be 0"
-          <| fun _ -> Expect.equal (AFn.boundedLength (null, 20)) 0 "under limit on range should be seq count"
-
-          ]
+          <| fun _ -> Expect.equal (AFn.boundedLength (null, 20)) 0 "under limit on range should be seq count" ]
 
 
 [<Tests>]
@@ -75,10 +73,7 @@ let seqToArrayTests =
               Expect.equal (Array.length a) 3 "Should have proper number of elements"
               Expect.equal a.[0] 0 "0-th element should be 0"
               Expect.equal a.[1] 1 "1-th element should be 1"
-              Expect.equal a.[2] 2 "2-th element should be 2"
-
-
-          ]
+              Expect.equal a.[2] 2 "2-th element should be 2" ]
 
 
 type TestFn() =
@@ -107,26 +102,25 @@ let basicAFnTests =
 
           testCase "call invoke()"
           <| fun _ ->
-              let result: string = downcast (tf :> IFn).invoke ()
+              let result: string = downcast (tf :> IFn).invoke()
               Expect.equal result "Zero" "Call with no args"
 
           testCase "call invoke(a)"
           <| fun _ ->
               let i = 12
-              let result: int = downcast (tf :> IFn).invoke (i)
+              let result: int = downcast (tf :> IFn).invoke(i)
               Expect.equal result (i + 1) "call with one arg should add 1"
 
           testCase "call invoke(a,b)"
           <| fun _ ->
               let i = 12
               let j = 30
-              let result: int = downcast (tf :> IFn).invoke (i, j)
+              let result: int = downcast (tf :> IFn).invoke(i, j)
               Expect.equal result (i + j) "call with two args should add them"
 
           testCase "call invoke with too many args fails"
           <| fun _ ->
-              let f () =
-                  (tf :> IFn).invoke (1, 2, 3, 4) |> ignore
+              let f () = (tf :> IFn).invoke(1, 2, 3, 4) |> ignore
 
               Expect.throwsT<ArityException> f "Does not accept four arguments"
 
@@ -155,6 +149,4 @@ let basicAFnTests =
                   AFn.applyToHelper (tf, SimpleRange(1, 5))
                   |> ignore
 
-              Expect.throwsT<ArityException> f "too many args should throw"
-
-          ]
+              Expect.throwsT<ArityException> f "too many args should throw" ]

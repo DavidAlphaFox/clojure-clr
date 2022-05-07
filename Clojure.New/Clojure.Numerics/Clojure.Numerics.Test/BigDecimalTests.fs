@@ -38,6 +38,7 @@ open System
 ///////////////////////////
 
 let c1hu = Context.Create(1u, RoundingMode.HalfUp)
+
 let c2hu = Context.Create(2u, RoundingMode.HalfUp)
 let c3hu = Context.Create(3u, RoundingMode.HalfUp)
 let c4hu = Context.Create(4u, RoundingMode.HalfUp)
@@ -137,16 +138,15 @@ let zeroParsingTests =
       ("-0", 0)
       ("-0000", 0)
       ("-00.00", -2) ]
-    |> List.map
-        (fun (input, expectedExponent) ->
-            testCase (sprintf "parsing '%s' yields 0 with exponent %i and precision 1" input expectedExponent)
-            <| fun _ ->
-                let ok, bd = BigDecimal.TryParse(input)
-                let si = input.ToString()
-                Expect.isTrue ok (sprintf "TryParse on %s should return true" si)
-                Expect.isTrue bd.Coefficient.IsZero (sprintf "coefficient of %s should be 0" si)
-                Expect.equal bd.Exponent expectedExponent (sprintf "Bad exponent for %s" si)
-                Expect.equal bd.Precision 1u (sprintf "Precision of %s should be 1" si))
+    |> List.map (fun (input, expectedExponent) ->
+        testCase (sprintf "parsing '%s' yields 0 with exponent %i and precision 1" input expectedExponent)
+        <| fun _ ->
+            let ok, bd = BigDecimal.TryParse(input)
+            let si = input.ToString()
+            Expect.isTrue ok (sprintf "TryParse on %s should return true" si)
+            Expect.isTrue bd.Coefficient.IsZero (sprintf "coefficient of %s should be 0" si)
+            Expect.equal bd.Exponent expectedExponent (sprintf "Bad exponent for %s" si)
+            Expect.equal bd.Precision 1u (sprintf "Precision of %s should be 1" si))
 
 [<Tests>]
 let zeroParsingList =
@@ -166,17 +166,10 @@ let simpleIntTest (decString: string) intString exponent precision =
 
 let createIntTests data =
     data
-    |> List.map
-        (fun (decString, intString, exponent, precision) ->
-            testCase (
-                sprintf
-                    "parsing '%s' yields %s with exponent %i and precision %u"
-                    decString
-                    intString
-                    exponent
-                    precision
-            )
-            <| fun _ -> simpleIntTest decString intString exponent precision)
+    |> List.map (fun (decString, intString, exponent, precision) ->
+        testCase
+            (sprintf "parsing '%s' yields %s with exponent %i and precision %u" decString intString exponent precision)
+        <| fun _ -> simpleIntTest decString intString exponent precision)
 
 let basicIntParsingTests =
     [ ("1", "1", 0, 1u)
@@ -368,10 +361,9 @@ let scientificStringTest biStr exp outStr =
 
 let createToStringTests data =
     data
-    |> List.map
-        (fun (biStr, exponent, outStr) ->
-            testCase (sprintf "printing '%s' with exponent %i yields '%s;" biStr exponent outStr)
-            <| fun _ -> scientificStringTest biStr exponent outStr)
+    |> List.map (fun (biStr, exponent, outStr) ->
+        testCase (sprintf "printing '%s' with exponent %i yields '%s;" biStr exponent outStr)
+        <| fun _ -> scientificStringTest biStr exponent outStr)
 
 let basicToStringTests =
     [ ("123", 0, "123")
@@ -434,10 +426,9 @@ let precisionTest str exponent precision =
 
 let createPrecisionTests data =
     data
-    |> List.map
-        (fun (str, exponent, precision) ->
-            testCase (sprintf "BD from '%s' with exponent %i has precision '%u;" str exponent precision)
-            <| fun _ -> precisionTest str exponent precision)
+    |> List.map (fun (str, exponent, precision) ->
+        testCase (sprintf "BD from '%s' with exponent %i has precision '%u;" str exponent precision)
+        <| fun _ -> precisionTest str exponent precision)
 
 let precisionTests =
     [ ("0", 0, 1u)
@@ -494,10 +485,9 @@ let doubleTest (v: double) (expectStr: string) (c: Context) =
 
 let createDoubleTests data =
     data
-    |> List.mapi
-        (fun i (v, expect, context) ->
-            testCase (sprintf "BD from double #%i '%s' with context %s" i expect (context.ToString()))
-            <| fun _ -> doubleTest v expect context)
+    |> List.mapi (fun i (v, expect, context) ->
+        testCase (sprintf "BD from double #%i '%s' with context %s" i expect (context.ToString()))
+        <| fun _ -> doubleTest v expect context)
 
 let doubleTests =
     [ (0.0, "0", c9hu)
@@ -652,10 +642,9 @@ let basicRoundingTest (bdStr: string) precision mode biStr exponent =
 
 let createRoundingTests data =
     data
-    |> List.map
-        (fun (bdStr, precision, mode, biStr, exponent) ->
-            testCase (sprintf "Rounding %s to %u %s yield %s %i" bdStr precision (mode.ToString()) biStr exponent)
-            <| fun _ -> basicRoundingTest bdStr precision mode biStr exponent)
+    |> List.map (fun (bdStr, precision, mode, biStr, exponent) ->
+        testCase (sprintf "Rounding %s to %u %s yield %s %i" bdStr precision (mode.ToString()) biStr exponent)
+        <| fun _ -> basicRoundingTest bdStr precision mode biStr exponent)
 
 let basicRoundingTests =
     [ ("123.456", 0u, RoundingMode.HalfUp, "0", 3)
@@ -806,10 +795,9 @@ let testQuantize (lhsStr: string) (rhsStr: string) mode expectStr =
 
 let createTestQuantizeTests data =
     data
-    |> List.map
-        (fun (lhsStr, rhsStr, mode, expectStr) ->
-            testCase (sprintf "quantize'%s' with using '%s' with mode %s " lhsStr rhsStr (mode.ToString()))
-            <| fun _ -> testQuantize lhsStr rhsStr mode expectStr)
+    |> List.map (fun (lhsStr, rhsStr, mode, expectStr) ->
+        testCase (sprintf "quantize'%s' with using '%s' with mode %s " lhsStr rhsStr (mode.ToString()))
+        <| fun _ -> testQuantize lhsStr rhsStr mode expectStr)
 
 let TQ test mode =
     let lhs, rhs, result = getThreeArgs test
@@ -817,10 +805,9 @@ let TQ test mode =
 
 let createTQTests data =
     data
-    |> List.map
-        (fun (str, mode) ->
-            testCase (sprintf "quantize'%s' with mode %s " str (mode.ToString()))
-            <| fun _ -> TQ str mode)
+    |> List.map (fun (str, mode) ->
+        testCase (sprintf "quantize'%s' with mode %s " str (mode.ToString()))
+        <| fun _ -> TQ str mode)
 
 
 // The following tests are taken from the spec test cases.
@@ -942,9 +929,7 @@ let quantizeSpecGeneral =
       ("quax152 quantize   1.0600 1e-3 ->  1.060 Rounded", mhu)
       ("quax153 quantize   1.0600 1e-2 ->  1.06 Rounded", mhu)
       ("quax154 quantize   1.0600 1e-1 ->  1.1 Inexact Rounded", mhu)
-      ("quax155 quantize   1.0600  1e0 ->  1 Inexact Rounded", mhu)
-
-      ]
+      ("quax155 quantize   1.0600  1e0 ->  1 Inexact Rounded", mhu) ]
 
 let quantizeSpecBaseTestsWithNonOneCoeffs =
     [ ("quax161 quantize 0      -9e0   -> 0", mhu)
@@ -1133,7 +1118,7 @@ let quantizeSpecRoundUpFromBelow =
       ("quax375 quantize  -7.8  1e0 -> -8 Inexact Rounded", mhu)
       ("quax376 quantize  -7.8 1e+1 -> -1E+1 Inexact Rounded", mhu)
       ("quax377 quantize  -7.8 1e+2 -> 0E+2 Inexact Rounded", mhu) // mod: neg zero
-      ("quax378 quantize  -7.8 1e+3 -> 0E+3 Inexact Rounded", mhu) ] // mod: neg zero
+      ("quax378 quantize  -7.8 1e+3 -> 0E+3 Inexact Rounded", mhu) ]
 
 let quantizeSpecSomeIndividuals =
     [
@@ -1145,7 +1130,7 @@ let quantizeSpecSomeIndividuals =
       ("quax384 quantize  -352364.506 1e-2 -> -352364.51 Inexact Rounded", mhu)
       ("quax385 quantize  -3523645.06 1e-2 -> -3523645.06", mhu)
       ("quax386 quantize  -35236450.6 1e-2 -> -35236450.60 Invalid_operation", mhu) // Mod: NaN
-      ("quax387 quantize  -352364506  1e-2 -> -352364506.00 Invalid_operation", mhu) ] // Mod: NaN
+      ("quax387 quantize  -352364506  1e-2 -> -352364506.00 Invalid_operation", mhu) ]
 
 let quantizeSpecExamplesFromEmail =
     [ ("quax391 quantize  12.34567  1e-3 -> 12.346   Inexact Rounded", mhu)
@@ -1153,7 +1138,7 @@ let quantizeSpecExamplesFromEmail =
       ("quax393 quantize  1234.567  1e-3 -> 1234.567", mhu)
       ("quax394 quantize  12345.67  1e-3 -> 12345.670 Invalid_operation", mhu) // Mod: NaN
       ("quax395 quantize  123456.7  1e-3 -> 123456.700 Invalid_operation", mhu) // Mod: NaN
-      ("quax396 quantize  1234567.  1e-3 -> 1234567.000 Invalid_operation", mhu) ] // Mod: NaN
+      ("quax396 quantize  1234567.  1e-3 -> 1234567.000 Invalid_operation", mhu) ]
 
 let quantizeSpecSome9999Examples =
     [
@@ -1354,10 +1339,9 @@ let absTestFromString test c =
 
 let createSpecAbsTests data =
     data
-    |> List.map
-        (fun (test, c) ->
-            testCase (sprintf "quantize'%s' with context %s " test (c.ToString()))
-            <| fun _ -> absTestFromString test c)
+    |> List.map (fun (test, c) ->
+        testCase (sprintf "quantize'%s' with context %s " test (c.ToString()))
+        <| fun _ -> absTestFromString test c)
 
 
 let specAbsTests =
@@ -1446,10 +1430,9 @@ let addTestFromStr test c =
 
 let createAddTests data =
     data
-    |> List.map
-        (fun (test, c) ->
-            testCase (sprintf "'%s' with context %s " test (c.ToString()))
-            <| fun _ -> addTestFromStr test c)
+    |> List.map (fun (test, c) ->
+        testCase (sprintf "'%s' with context %s " test (c.ToString()))
+        <| fun _ -> addTestFromStr test c)
 
 
 let addTests =
@@ -1923,7 +1906,7 @@ let addTests =
       ("addx475 add  -77e-12      10   ->  10.0000000 Inexact Rounded", c9he)
       ("addx476 add  -77e-999     10   ->  10.0000000 Inexact Rounded", c9he)
       //("addx477 add  -77e-9999999 10   ->  10.0000000 Inexact Rounded", c9he);
-      ]
+     ]
 
 [<Tests>]
 let addTestList =
@@ -1947,10 +1930,9 @@ let subTestFromString test c =
 
 let createSubTests data =
     data
-    |> Array.map
-        (fun (test, c) ->
-            testCase (sprintf "Test '%s' with context %s " test (c.ToString()))
-            <| fun _ -> subTestFromString test c)
+    |> Array.map (fun (test, c) ->
+        testCase (sprintf "Test '%s' with context %s " test (c.ToString()))
+        <| fun _ -> subTestFromString test c)
 
 
 let subTests =
@@ -2806,13 +2788,7 @@ let subTests =
        ("subx1125  subtract 130E-2  120E-2 -> 0.10", c34hu)
        ("subx1126  subtract 130E-2  12E-1  -> 0.10", c34hu)
        ("subx1127  subtract 130E-2  1E0    -> 0.30", c34hu)
-       ("subx1128  subtract 1E2     1E4    -> -9.9E+3", c34hu)
-
-       //-- Null tests
-       //subx9990 subtract 10  # -> NaN Invalid_operation
-       //subx9991 subtract  # 10 -> NaN Invalid_operation
-
-       |]
+       ("subx1128  subtract 1E2     1E4    -> -9.9E+3", c34hu) |]
 
 [<Tests>]
 let subTestList =
@@ -2838,10 +2814,9 @@ let multiplyTestFromStr test c =
 
 let createMultiplyTests data =
     data
-    |> List.map
-        (fun (test, c) ->
-            testCase (sprintf "'%s' with context %s " test (c.ToString()))
-            <| fun _ -> multiplyTestFromStr test c)
+    |> List.map (fun (test, c) ->
+        testCase (sprintf "'%s' with context %s " test (c.ToString()))
+        <| fun _ -> multiplyTestFromStr test c)
 
 
 let multiplyTests =
@@ -3232,19 +3207,7 @@ let multiplyTests =
       ("mulx575 multiply -1.0   0.0   -> 0.00", c9hu) // mod: neg zero
       ("mulx576 multiply -1.0  -0.0   ->  0.00", c9hu)
       ("mulx577 multiply  1.0   0.0   ->  0.00", c9hu)
-      ("mulx578 multiply  1.0  -0.0   -> 0.00", c9hu) // mod: neg zero
-
-
-      //-- Specials
-
-      //-- test subnormals rounding
-      //precision:   5
-      //maxExponent: 999
-      //minexponent: -999
-      //rounding:    half_even
-
-      //...
-      ]
+      ("mulx578 multiply  1.0  -0.0   -> 0.00", c9hu) ] // mod: neg zero
 
 [<Tests>]
 let multiplyTestList =
@@ -3272,17 +3235,15 @@ let divideTestFromStr test c =
 
 let createDivideTests data =
     data
-    |> List.map
-        (fun (test, c) ->
-            testCase (sprintf "'%s' with context %s " test (c.ToString()))
-            <| fun _ -> divideTestFromStr test c)
+    |> List.map (fun (test, c) ->
+        testCase (sprintf "'%s' with context %s " test (c.ToString()))
+        <| fun _ -> divideTestFromStr test c)
 
 let createDivideTestsEx data =
     data
-    |> List.map
-        (fun (test, c) ->
-            testCase (sprintf "'%s' with context %s " test (c.ToString()))
-            <| fun _ -> divideTestFromStrEx test c)
+    |> List.map (fun (test, c) ->
+        testCase (sprintf "'%s' with context %s " test (c.ToString()))
+        <| fun _ -> divideTestFromStrEx test c)
 
 
 let specDivideTests =
@@ -4030,17 +3991,15 @@ let divIntTestFromStr test c =
 
 let createDivIntTests data =
     data
-    |> List.map
-        (fun (test, c) ->
-            testCase (sprintf "'%s' with context %s " test (c.ToString()))
-            <| fun _ -> divIntTestFromStr test c)
+    |> List.map (fun (test, c) ->
+        testCase (sprintf "'%s' with context %s " test (c.ToString()))
+        <| fun _ -> divIntTestFromStr test c)
 
 let createDivIntTestsEx data =
     data
-    |> List.map
-        (fun (test, c) ->
-            testCase (sprintf "'%s' with context %s " test (c.ToString()))
-            <| fun _ -> divIntTestFromStrEx test c)
+    |> List.map (fun (test, c) ->
+        testCase (sprintf "'%s' with context %s " test (c.ToString()))
+        <| fun _ -> divIntTestFromStrEx test c)
 
 
 let specDivIntTests =
@@ -4328,7 +4287,7 @@ let specDivIntTests =
       ("dvix571 divideint  0.0  -1.0   -> 0", c9hu) // mod: neg zero
       ("dvix572 divideint -0.0  -1.0   ->  0", c9hu)
       ("dvix573 divideint  0.0   1.0   ->  0", c9hu)
-      ("dvix574 divideint -0.0   1.0   -> 0", c9hu) ] // mod: neg zero
+      ("dvix574 divideint -0.0   1.0   -> 0", c9hu) ]
 
 let specIntDivErrorTests =
     [
@@ -4388,9 +4347,7 @@ let specIntDivErrorTests =
       ("dvix575 divideint -1.0   0.0   -> -Infinity Division_by_zero", c9hu)
       ("dvix576 divideint -1.0  -0.0   ->  Infinity Division_by_zero", c9hu)
       ("dvix577 divideint  1.0   0.0   ->  Infinity Division_by_zero", c9hu)
-      ("dvix578 divideint  1.0  -0.0   -> -Infinity Division_by_zero", c9hu)
-
-      ]
+      ("dvix578 divideint  1.0  -0.0   -> -Infinity Division_by_zero", c9hu) ]
 
 
 [<Tests>]
@@ -4419,10 +4376,9 @@ let powerTestFromStr test c =
 
 let createPowerTests data =
     data
-    |> List.map
-        (fun (test, c) ->
-            testCase (sprintf "'%s' with context %s " test (c.ToString()))
-            <| fun _ -> powerTestFromStr test c)
+    |> List.map (fun (test, c) ->
+        testCase (sprintf "'%s' with context %s " test (c.ToString()))
+        <| fun _ -> powerTestFromStr test c)
 
 
 let specPowerTests =
@@ -4556,13 +4512,7 @@ let specPowerTests =
 
       ("powx123 power   '2'  '-1'   -> '0.5'", c9he)
       ("powx124 power   '2'  '-2'   -> '0.25'", c9he)
-      ("powx125 power   '2'  '-4'   -> '0.0625'", c9he)
-
-      //TPow("powx126 power   '0'  '-1'   -> Infinity", c9he);
-      //TPow("powx127 power   '0'  '-2'   -> Infinity", c9he);
-      //TPow("powx128 power   -0   '-1'   -> -Infinity", c9he);
-      //TPow("powx129 power   -0   '-2'   -> Infinity", c9he);
-      ]
+      ("powx125 power   '2'  '-4'   -> '0.0625'", c9he) ]
 
 
 [<Tests>]
@@ -4674,10 +4624,9 @@ let decimalTest (v: decimal) (expectStr: string) (c: Context) =
 
 let createDecimalTests data =
     data
-    |> List.mapi
-        (fun i (v, expect, context) ->
-            testCase (sprintf "BD from decimal #%i '%s' with context %s" i expect (context.ToString()))
-            <| fun _ -> decimalTest v expect context)
+    |> List.mapi (fun i (v, expect, context) ->
+        testCase (sprintf "BD from decimal #%i '%s' with context %s" i expect (context.ToString()))
+        <| fun _ -> decimalTest v expect context)
 
 let decimalTests =
     [ (0M, "0", c9hu)

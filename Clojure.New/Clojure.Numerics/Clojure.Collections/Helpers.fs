@@ -62,17 +62,14 @@ module RT =
 
 
     // Was RT.Length
-    let seqLength (list: ISeq) : int =
+    let seqLength (list: ISeq): int =
         let rec step (s: ISeq) cnt =
-            if s = null then
-                cnt
-            else
-                step (s.next ()) (cnt + 1)
+            if s = null then cnt else step (s.next ()) (cnt + 1)
 
         step list 0
 
     // TODO: Prime candidate for protocols
-    let count (o: obj) : int =
+    let count (o: obj): int =
         match o with
         | null -> 0
         | :? Counted as c -> c.count ()
@@ -88,20 +85,16 @@ module RT =
         | :? ICollection as c -> c.Count
         | :? DictionaryEntry -> 2
         | :? Array as a -> a.GetLength(0)
-        | _ when
-            o.GetType().IsGenericType
-            && o.GetType().Name = "KeyValuePair`2"
-            ->
-            2
+        | _ when o.GetType().IsGenericType
+                 && o.GetType().Name = "KeyValuePair`2" -> 2
         | _ ->
             raise
-            <| InvalidOperationException(
-                "count not supported on this type: "
-                + Util.nameForType (o.GetType())
-            )
+            <| InvalidOperationException
+                ("count not supported on this type: "
+                 + Util.nameForType (o.GetType()))
 
     // TODO:Prime candidate for protocols
-    let nth (coll: obj, n: int) : obj =
+    let nth (coll: obj, n: int): obj =
         if n < 0 then
             raise
             <| ArgumentOutOfRangeException("n", "index must be non-negative")
@@ -132,10 +125,8 @@ module RT =
             | _ ->
                 raise
                 <| ArgumentOutOfRangeException("n", "index out of bounds for DictionaryEntry, must be 0,1")
-        | _ when
-            coll.GetType().IsGenericType
-            && coll.GetType().Name.Equals("KeyValuePair`2")
-            ->
+        | _ when coll.GetType().IsGenericType
+                 && coll.GetType().Name.Equals("KeyValuePair`2") ->
             match n with
             | 0 ->
                 coll
@@ -161,24 +152,20 @@ module RT =
             step (RT.seq (coll)) 0
         | _ ->
             raise
-            <| InvalidOperationException(
-                "nth not supported on type"
-                + Util.nameForType (coll.GetType())
-            )
+            <| InvalidOperationException
+                ("nth not supported on type"
+                 + Util.nameForType (coll.GetType()))
 
 
 
 
     // TODO: Prime candidate for protocols
-    let get (coll: obj, key: obj) : obj =
+    let get (coll: obj, key: obj): obj =
 
         let getByNth coll key =
             let n = Util.convertToInt (key)
 
-            if n >= 0 && n < RT.count (coll) then
-                RT.nth (coll, n)
-            else
-                null
+            if n >= 0 && n < RT.count (coll) then RT.nth (coll, n) else null
 
         match coll with
         | null -> null
@@ -192,41 +179,26 @@ module RT =
 
     // TODO: Prime candidate for protocols
     // This was called get -- but we can't have overloads in modules!
-    let get3 (coll: obj, key: obj, notFound: obj) : obj =
+    let get3 (coll: obj, key: obj, notFound: obj): obj =
 
         let getByNth coll key =
             let n = Util.convertToInt (key)
 
-            if n >= 0 && n < RT.count (coll) then
-                RT.nth (coll, n)
-            else
-                notFound
+            if n >= 0 && n < RT.count (coll) then RT.nth (coll, n) else notFound
 
         match coll with
         | null -> null
         | :? ILookup as il -> il.valAt (key, notFound)
-        | :? IDictionary as d ->
-            if d.Contains(key) then
-                d.[key]
-            else
-                notFound
-        | :? IPersistentSet as s ->
-            if s.contains (key) then
-                s.get (key)
-            else
-                notFound
+        | :? IDictionary as d -> if d.Contains(key) then d.[key] else notFound
+        | :? IPersistentSet as s -> if s.contains (key) then s.get (key) else notFound
         | :? string as s when Util.isNumeric (key) -> getByNth s key
         | _ when coll.GetType().IsArray -> getByNth coll key
-        | :? ITransientSet as tset ->
-            if tset.contains (key) then
-                tset.get (key)
-            else
-                notFound
+        | :? ITransientSet as tset -> if tset.contains (key) then tset.get (key) else notFound
         | _ -> notFound
 
     // need to move defn of Reduced to before Helpers (currently in Sequences)
 
-    let isReduced (x: obj) : bool =
+    let isReduced (x: obj): bool =
         match x with
         | :? Reduced -> true
         | _ -> false
@@ -240,7 +212,7 @@ module RT =
     // TODO: figure out how to properly incorporate 'readably' into this interface.
     // Probably needs to happen with the functions setthe functions above.
 
-    let rec baseMetaPrinter (x: obj, w: TextWriter) : unit =
+    let rec baseMetaPrinter (x: obj, w: TextWriter): unit =
         match x with
         | :? IMeta as xo -> // original code has Obj here, but not sure why this is correct.  We only need an IMeta to have metadata.
             let meta = xo.meta () // the real version will check for a meta with count=1 and just a tag key and special case that.
@@ -249,12 +221,11 @@ module RT =
             w.Write(' ')
         | _ -> ()
 
-    and basePrinter (readably: bool, x: obj, w: TextWriter) : unit =
+    and basePrinter (readably: bool, x: obj, w: TextWriter): unit =
 
         let printInnerSeq readably (s: ISeq) (w: TextWriter) =
             let rec step (s: ISeq) =
-                if s <> null then
-                    basePrinter (readably, s, w)
+                if s <> null then basePrinter (readably, s, w)
 
                 if s.next () <> null then w.Write(' ')
                 s.next () |> step
@@ -283,17 +254,16 @@ module RT =
                 w.Write('"')
 
                 s
-                |> Seq.iter
-                    (fun c ->
-                        match c with
-                        | '\n' -> w.Write("\\n")
-                        | '\t' -> w.Write("\\t")
-                        | '\r' -> w.Write("\\r")
-                        | '"' -> w.Write("\\\"")
-                        | '\\' -> w.Write("\\\\")
-                        | '\f' -> w.Write("\\f")
-                        | '\b' -> w.Write("\\b")
-                        | _ -> w.Write(c))
+                |> Seq.iter (fun c ->
+                    match c with
+                    | '\n' -> w.Write("\\n")
+                    | '\t' -> w.Write("\\t")
+                    | '\r' -> w.Write("\\r")
+                    | '"' -> w.Write("\\\"")
+                    | '\\' -> w.Write("\\\\")
+                    | '\f' -> w.Write("\\f")
+                    | '\b' -> w.Write("\\b")
+                    | _ -> w.Write(c))
 
                 w.Write('"')
 
@@ -322,7 +292,6 @@ module RT =
         | :? IPersistentVector as v ->
             let n = v.count ()
             w.Write('[')
-
             for i = 0 to n - 1 do
                 basePrinter (readably, v.nth (i), w)
                 if i < n - 1 then w.Write(" ")
@@ -332,8 +301,7 @@ module RT =
             let rec step (s: ISeq) =
                 basePrinter (readably, s.first (), w)
 
-                if not (isNull (s.next ())) then
-                    w.Write(" ")
+                if not (isNull (s.next ())) then w.Write(" ")
 
                 step (s.next ())
 
@@ -398,7 +366,7 @@ module RT =
     //}
 
 
-    and print (x: obj, w: TextWriter) : unit = RTEnv.printFn (x, w)
+    and print (x: obj, w: TextWriter): unit = RTEnv.printFn (x, w)
 
     let printString (x: obj) =
         use sw = new StringWriter()
@@ -427,10 +395,7 @@ module Util =
         && t.GetGenericTypeDefinition() = typedefof<Nullable<_>>
 
     let private getNonNullableType (t: Type) =
-        if isNullableType t then
-            t.GetGenericArguments().[0]
-        else
-            t
+        if isNullableType t then t.GetGenericArguments().[0] else t
 
 
 
@@ -460,8 +425,7 @@ module Util =
             | _ when RTEnv.isExtraNumericType t -> true
             | _ -> false
 
-    let isNumeric (o: obj) =
-        o <> null && isNumericType (o.GetType())
+    let isNumeric (o: obj) = o <> null && isNumericType (o.GetType())
 
     let numericEquals (x: obj, y: obj) = RTEnv.numericEquals (x, y)
 
@@ -474,17 +438,13 @@ module Util =
         | _ -> k1.Equals(k2)
 
     let equiv (k1: obj, k2: obj) =
-        if Object.ReferenceEquals(k1, k2) then
-            true
-        elif isNull k1 then
-            false
-        else if isNumeric k1 && isNumeric k2 then
-            numericEquals (k1, k2)
-        else
-            pcequiv (k1, k2)
+        if Object.ReferenceEquals(k1, k2) then true
+        elif isNull k1 then false
+        else if isNumeric k1 && isNumeric k2 then numericEquals (k1, k2)
+        else pcequiv (k1, k2)
 
     // TODO: Benchmark this against alternative implementations: just use Convert, or match on TypeCode.
-    let convertToInt (o: obj) : int =
+    let convertToInt (o: obj): int =
         match o with
         | :? Byte as x -> (int x)
         | :? Char as x -> (int x)
@@ -527,7 +487,7 @@ module Util =
     // This will give us an initial value.
     // Not handled: BigDecimal, BigInteger, BigRational, BigInt
 
-    let baseHashNumber (o: obj) : int =
+    let baseHashNumber (o: obj): int =
         match o with
         | :? uint64 as n -> Murmur3.HashLongU n |> int
         | :? uint32 as n -> Murmur3.HashLongU(uint64 n) |> int
@@ -543,11 +503,11 @@ module Util =
         | :? float32 as n -> n.GetHashCode()
         | _ -> o.GetHashCode()
 
-    let hashNumber (o: obj) : int = RTEnv.hashNumberFn o
+    let hashNumber (o: obj): int = RTEnv.hashNumberFn o
 
 
 
-    let hasheq (o: obj) : int =
+    let hasheq (o: obj): int =
         match o with
         | null -> 0
         | :? IHashEq as he -> he.hasheq ()
@@ -564,7 +524,7 @@ module Util =
     //       Might want to move Murmur3 to be independent, so leaving them there would have prevented that.
 
 
-    let hashOrderedU (xs: IEnumerable) : uint =
+    let hashOrderedU (xs: IEnumerable): uint =
         let mutable n = 0
         let mutable hash = 1u
 
@@ -574,7 +534,7 @@ module Util =
 
         Murmur3.finalizeCollHash hash n
 
-    let hashUnorderedU (xs: IEnumerable) : uint =
+    let hashUnorderedU (xs: IEnumerable): uint =
         let mutable n = 0
         let mutable hash = 0u
 
@@ -584,8 +544,8 @@ module Util =
 
         Murmur3.finalizeCollHash hash n
 
-    let hashOrdered (xs: IEnumerable) : int = hashOrderedU xs |> int
-    let hashUnordered (xs: IEnumerable) : int = hashUnorderedU xs |> int
+    let hashOrdered (xs: IEnumerable): int = hashOrderedU xs |> int
+    let hashUnordered (xs: IEnumerable): int = hashUnorderedU xs |> int
 
     let nameForType (t: Type) =
         //| null -> "<null>"  // prior version printed a message
@@ -755,7 +715,7 @@ module Util =
 module RTEnvInitialization =
 
 
-    let initialize () : unit =
+    let initialize (): unit =
         RTEnv.setPrintFn (fun (x, w) -> RT.basePrinter (true, x, w))
         RTEnv.setMetaPrintFn RT.baseMetaPrinter
         RTEnv.setNumericEqualityFn Util.baseNumericEqualityFn

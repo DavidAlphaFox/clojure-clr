@@ -15,12 +15,9 @@ type BigRational(n: BigInteger, d: BigInteger) =
             <| DivideByZeroException("Denominator is zero")
 
         let (n1, d1) =
-            if n.Sign = 0 then
-                (BigInteger.Zero, BigInteger.One)
-            elif d.Sign < 0 then
-                (-n, -d)
-            else
-                (n, d)
+            if n.Sign = 0 then (BigInteger.Zero, BigInteger.One)
+            elif d.Sign < 0 then (-n, -d)
+            else (n, d)
 
         let n2, d2 = BigRational.normalize n1 d1
         numerator <- n2
@@ -70,10 +67,7 @@ type BigRational(n: BigInteger, d: BigInteger) =
 
         let gcd = BigInteger.GreatestCommonDivisor(n, d)
 
-        if gcd.IsOne then
-            (n, d)
-        else
-            (n / gcd, d / gcd)
+        if gcd.IsOne then (n, d) else (n / gcd, d / gcd)
 
     // some accessors
 
@@ -91,10 +85,9 @@ type BigRational(n: BigInteger, d: BigInteger) =
 
     interface IEquatable<BigRational> with
         member this.Equals(y: BigRational) =
-            if this.Denominator = y.Denominator then
-                this.Numerator = y.Numerator
-            else
-                this.Numerator * y.Denominator = y.Numerator * this.Denominator
+            if this.Denominator = y.Denominator
+            then this.Numerator = y.Numerator
+            else this.Numerator * y.Denominator = y.Numerator * this.Denominator
 
     override this.Equals(obj) =
         match obj with
@@ -180,7 +173,7 @@ type BigRational(n: BigInteger, d: BigInteger) =
 
     // Parsing
 
-    static member Parse(s: string) : BigRational =
+    static member Parse(s: string): BigRational =
         let parts = s.Split("/")
 
         match Array.length parts with
@@ -189,12 +182,11 @@ type BigRational(n: BigInteger, d: BigInteger) =
         | 2 -> BigRational(BigInteger.Parse(parts.[0]), BigInteger.Parse(parts.[1]))
         | _ -> invalidArg "s" "More than one /"
 
-    static member TryParse(s: String, value: outref<BigRational>) : bool =
+    static member TryParse(s: String, value: outref<BigRational>): bool =
         try
             value <- BigRational.Parse s
             true
-        with
-        | ex -> false
+        with ex -> false
 
 
 
@@ -202,10 +194,9 @@ type BigRational(n: BigInteger, d: BigInteger) =
 
     // -(c/d) = (-c)/d
     member this.Negate() =
-        if this.IsZero then
-            this
-        else
-            BigRational(-this.Numerator, this.Denominator)
+        if this.IsZero
+        then this
+        else BigRational(-this.Numerator, this.Denominator)
 
     static member Negate(x: BigRational) = x.Negate()
     static member (~-)(x: BigRational) = x.Negate()
@@ -213,31 +204,28 @@ type BigRational(n: BigInteger, d: BigInteger) =
 
     // abs (a/b) = abs(a)/b
     member this.Abs() =
-        if this.Numerator.Sign < 0 then
-            BigRational(BigInteger.Abs(this.Numerator), this.Denominator)
-        else
-            this
+        if this.Numerator.Sign < 0
+        then BigRational(BigInteger.Abs(this.Numerator), this.Denominator)
+        else this
 
     static member Abs(x: BigRational) = x.Abs()
 
     // a/b + c/d = (ad+bc)/bd
     member this.Add(y: BigRational) =
-        BigRational(
-            this.Numerator * y.Denominator
-            + this.Denominator * y.Numerator,
-            this.Denominator * y.Denominator
-        )
+        BigRational
+            (this.Numerator * y.Denominator
+             + this.Denominator * y.Numerator,
+             this.Denominator * y.Denominator)
 
     static member Add(x: BigRational, y: BigRational) = x.Add(y)
     static member (+)(x: BigRational, y: BigRational) = x.Add(y)
 
     // a/b - c/d = (ad-bc)/bd
     member this.Subtract(y: BigRational) =
-        BigRational(
-            this.Numerator * y.Denominator
-            - this.Denominator * y.Numerator,
-            this.Denominator * y.Denominator
-        )
+        BigRational
+            (this.Numerator * y.Denominator
+             - this.Denominator * y.Numerator,
+             this.Denominator * y.Denominator)
 
     static member Subtract(x: BigRational, y: BigRational) = x.Subtract(y)
     static member (-)(x: BigRational, y: BigRational) = x.Subtract(y)
@@ -259,11 +247,10 @@ type BigRational(n: BigInteger, d: BigInteger) =
 
     // a/b % c/d = (ad % bc)/bd
     member this.Mod(y: BigRational) =
-        BigRational(
-            this.Numerator * y.Denominator % this.Denominator
-            * y.Numerator,
-            this.Denominator * y.Denominator
-        )
+        BigRational
+            (this.Numerator * y.Denominator % this.Denominator
+             * y.Numerator,
+             this.Denominator * y.Denominator)
 
     static member Mod(x: BigRational, y: BigRational) = x.Mod(y)
     static member (%)(x: BigRational, y: BigRational) = x.Mod(y)

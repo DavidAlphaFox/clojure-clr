@@ -48,7 +48,7 @@ let basicPersistentHashMapCreateTests =
           <| fun _ ->
               let items: obj [] = Array.empty
               let a = ArrayList(items)
-              let s = PersistentList.create(a).seq ()
+              let s = PersistentList.create(a).seq()
 
               let m =
                   PersistentHashMap.create (s) :> IPersistentMap
@@ -60,7 +60,7 @@ let basicPersistentHashMapCreateTests =
           <| fun _ ->
               let items: obj [] = [| 1; "a"; 2; "b" |]
               let a = ArrayList(items)
-              let s = PersistentList.create(a).seq ()
+              let s = PersistentList.create(a).seq()
 
               let m =
                   PersistentHashMap.create (s) :> IPersistentMap
@@ -78,7 +78,7 @@ let basicPersistentHashMapCreateTests =
                   PersistentHashMap.create () :> IPersistentMap
 
               Expect.equal (m.count ()) 0 "Empty map should have 0 count"
-              Expect.isNull ((m :?> IMeta).meta ()) "Empty map should have no meta"
+              Expect.isNull ((m :?> IMeta).meta()) "Empty map should have no meta"
 
           // Non-duplicate
           testCase "Create on args returns map"
@@ -100,7 +100,7 @@ let basicPersistentHashMapCreateTests =
                   PersistentHashMap.create (meta :> IPersistentMap) :> IPersistentMap
 
               Expect.equal (m.count ()) 0 "Empty map should have 0 count"
-              Expect.isTrue (Object.ReferenceEquals((m :?> IMeta).meta (), meta)) "Should have identical meta"
+              Expect.isTrue (Object.ReferenceEquals((m :?> IMeta).meta(), meta)) "Should have identical meta"
 
           // Non-duplicate
           testCase "Create on metaargs returns map"
@@ -115,7 +115,7 @@ let basicPersistentHashMapCreateTests =
               Expect.equal (m.valAt (1)) (upcast "a") "m[1]=a"
               Expect.equal (m.valAt (2)) (upcast "b") "m[2]=b"
               Expect.isFalse (m.containsKey (3)) "Shouldn't contain some random key"
-              Expect.isTrue (Object.ReferenceEquals((m :?> IMeta).meta (), meta)) "Should have identical meta" ]
+              Expect.isTrue (Object.ReferenceEquals((m :?> IMeta).meta(), meta)) "Should have identical meta" ]
 
 [<Tests>]
 let basicPersistentHashMapTests =
@@ -142,9 +142,7 @@ let basicPersistentHashMapTests =
               Expect.equal (m.valAt (1)) (upcast "a") "m[1]=a"
               Expect.equal (m.valAt (2)) (upcast "b") "m[2]=b"
               Expect.isTrue (m.containsKey (1)) "Check containsKey"
-              Expect.isFalse (m.containsKey (3)) "Shouldn't contain some random key"
-
-          ]
+              Expect.isFalse (m.containsKey (3)) "Shouldn't contain some random key" ]
 
 [<Tests>]
 let basicPersistentHashMapAssocTests =
@@ -297,16 +295,14 @@ let basicPersistentHashMapPersistentCollectionTests =
               let m = PersistentHashMap.create (d)
               let s = m.seq ()
               let me1 = s.first () :?> IMapEntry
-              let me2 = s.next().first () :?> IMapEntry
-              let last = s.next().next ()
+              let me2 = s.next().first() :?> IMapEntry
+              let last = s.next().next()
 
               Expect.equal (s.count ()) 2 "COunt of seq should be # of entries in map"
               Expect.equal (me1.value ()) (m.valAt (me1.key ())) "K/V pair should match map"
               Expect.equal (me2.value ()) (m.valAt (me2.key ())) "K/V pair should match map"
               Expect.notEqual (me1.key ()) (me2.key ()) "Should see different keys"
-              Expect.isNull last "end of seq should be null"
-
-          ]
+              Expect.isNull last "end of seq should be null" ]
 
 [<Tests>]
 let basicPersistentHashMapPersistentMapTests =
@@ -370,7 +366,6 @@ let basicPersistentHashMapPersistentMapTests =
           testCase "without on existing key removes it"
           <| fun _ ->
               let d: Dictionary<int, string> = Dictionary()
-
               d.[3] <- "a"
               d.[5] <- "b"
               d.[7] <- "c"
@@ -386,7 +381,6 @@ let basicPersistentHashMapPersistentMapTests =
           testCase "without on missing key returns original"
           <| fun _ ->
               let d: Dictionary<int, string> = Dictionary()
-
               d.[3] <- "a"
               d.[5] <- "b"
               d.[7] <- "c"
@@ -400,18 +394,14 @@ let basicPersistentHashMapPersistentMapTests =
           <| fun _ ->
 
               let d: Dictionary<int, string> = Dictionary()
-
               d.[3] <- "a"
               d.[5] <- "b"
               d.[7] <- "c"
 
               let m1 = PersistentHashMap.create (d)
-              let m2 = m1.without(3).without(5).without (7)
+              let m2 = m1.without(3).without(5).without(7)
 
-              Expect.equal (m2.count ()) 0 "Should be no entries remaining"
-
-        
-          ]
+              Expect.equal (m2.count ()) 0 "Should be no entries remaining" ]
 
 [<Tests>]
 let aPersistentMapTests =
@@ -436,7 +426,6 @@ let aPersistentMapTests =
               d.[2] <- "b"
 
               let m = PersistentHashMap.create (d)
-
               d.[2] <- "c"
 
               Expect.isFalse (m.equiv (d)) "Equal on different dictionary"
@@ -448,7 +437,6 @@ let aPersistentMapTests =
               d.[2] <- "b"
 
               let m = PersistentHashMap.create (d)
-
               d.[3] <- "c"
 
               Expect.isFalse (m.equiv (d)) "Equal on different dictionary"
@@ -460,7 +448,6 @@ let aPersistentMapTests =
               d.[2] <- "b"
 
               let m1 = PersistentHashMap.create (d)
-
               d.[2] <- "c"
 
 
@@ -784,8 +771,7 @@ let aPersistentMapTests =
 
               // Could be either order
               Expect.isTrue
-                  (match de1.key () :?> int32, de1.value () :?> string, de2.key () :?> int32, de2.value () :?> string
-                       with
+                  (match de1.key () :?> int32, de1.value () :?> string, de2.key () :?> int32, de2.value () :?> string with
                    | 1, "a", 2, "b"
                    | 2, "b", 1, "a" -> true
                    | _ -> false)
@@ -810,18 +796,14 @@ let aPersistentMapTests =
 
               // Could be either order
               Expect.isTrue
-                  (match a.[0].key () :?> int32,
-                         a.[0].value () :?> string,
-                         a.[1].key () :?> int32,
-                         a.[1].value () :?> string
-                       with
+                  (match a.[0].key() :?> int32,
+                         a.[0].value() :?> string,
+                         a.[1].key() :?> int32,
+                         a.[1].value() :?> string with
                    | 1, "a", 2, "b"
                    | 2, "b", 1, "a" -> true
                    | _ -> false)
-                  "matched key/val pairs"
-
-
-          ]
+                  "matched key/val pairs" ]
 
 
 [<Tests>]
@@ -830,21 +812,19 @@ let PersistentHashMapIObjTests =
         "PersistentHashMap IObj tests"
         [
 
-          testCase "Verify PersistentHashMap.IObj"
-          <| fun _ ->
-              let d: Dictionary<int, string> = Dictionary()
-              d.[1] <- "a"
-              d.[2] <- "b"
+        testCase "Verify PersistentHashMap.IObj"
+        <| fun _ ->
+            let d: Dictionary<int, string> = Dictionary()
+            d.[1] <- "a"
+            d.[2] <- "b"
 
-              let m = PersistentHashMap.create (d) :?> IObj
-              let pm = m.withMeta (metaForSimpleTests)
+            let m = PersistentHashMap.create (d) :?> IObj
+            let pm = m.withMeta (metaForSimpleTests)
 
-              verifyNullMeta m
-              verifyWithMetaHasCorrectMeta pm
-              verifyWithMetaNoChange m
-              verifyWithMetaReturnType m typeof<PersistentHashMap>
-
-         ]
+            verifyNullMeta m
+            verifyWithMetaHasCorrectMeta pm
+            verifyWithMetaNoChange m
+            verifyWithMetaReturnType m typeof<PersistentHashMap> ]
 
 
 //  Make a type with a restricted set of hash code values to test hash collision logic
@@ -860,13 +840,12 @@ type CollisionKey(id, factor) =
     member _.Id = id
     member _.Factor = factor
 
-let testCollisions (numEntries: int) (numHashCodes: int) : unit =
+let testCollisions (numEntries: int) (numHashCodes: int): unit =
 
     // create map with entries  key=CollisionKey(i,_), value = i
 
     let mutable m =
         PersistentHashMap.Empty :> IPersistentMap
-
     for i = 0 to numEntries - 1 do
         m <- m.assoc (CollisionKey(i, numHashCodes), i)
 
@@ -889,7 +868,6 @@ let testCollisions (numEntries: int) (numHashCodes: int) : unit =
     step 0 (m.seq ())
 
     let b = Array.sort (a)
-
     for i = 0 to b.Length - 1 do
         Expect.equal b.[i] i "Key I"
 
@@ -899,7 +877,7 @@ let testCollisions (numEntries: int) (numHashCodes: int) : unit =
     // check key enumerator
 
     let a: int [] = Array.zeroCreate (m.count ())
-    let imek = (m :?> IMapEnumerable).keyEnumerator ()
+    let imek = (m :?> IMapEnumerable).keyEnumerator()
 
     let rec step (i: int) =
         if imek.MoveNext() then
@@ -909,14 +887,13 @@ let testCollisions (numEntries: int) (numHashCodes: int) : unit =
     step 0
 
     let b = Array.sort (a)
-
     for i = 0 to b.Length - 1 do
         Expect.equal b.[i] i "Key I"
 
     // check value enumerator
 
     let a: int [] = Array.zeroCreate (m.count ())
-    let imek = (m :?> IMapEnumerable).valEnumerator ()
+    let imek = (m :?> IMapEnumerable).valEnumerator()
 
     let rec step (i: int) =
         if imek.MoveNext() then
@@ -926,7 +903,6 @@ let testCollisions (numEntries: int) (numHashCodes: int) : unit =
     step 0
 
     let b = Array.sort (a)
-
     for i = 0 to b.Length - 1 do
         Expect.equal b.[i] i "Val I"
 
@@ -937,13 +913,11 @@ let testCollisions (numEntries: int) (numHashCodes: int) : unit =
 
     for kv in (m :> IEnumerable) do
         let id =
-            ((kv :?> IMapEntry).key () :?> CollisionKey).Id
-
+            ((kv :?> IMapEntry).key() :?> CollisionKey).Id
         a.[i] <- id
         i <- i + 1
 
     let b = Array.sort (a)
-
     for i = 0 to b.Length - 1 do
         Expect.equal b.[i] i "Key I"
 
@@ -958,7 +932,6 @@ let testCollisions (numEntries: int) (numHashCodes: int) : unit =
         i <- i + 1
 
     let b = Array.sort (a)
-
     for i = 0 to b.Length - 1 do
         Expect.equal b.[i] i "Key I"
 
@@ -967,8 +940,6 @@ let testCollisions (numEntries: int) (numHashCodes: int) : unit =
         let key = kv.key () :?> CollisionKey
         let value = kv.value () :?> int
         Expect.equal key.Id value "Value should be same as key.Id"
-
-    // Check valAt, entryAt
     for i = 0 to numEntries - 1 do
         let key = CollisionKey(i, numHashCodes)
         let v = m.valAt (key)
@@ -997,13 +968,7 @@ let collisionTests =
     testList
         "PersistentHashMap collision tests"
         [ testCase "Collisions 100 10"
-          <| fun _ ->
-              testCollisions 100 10
-              //testCollisions 1000 100
-              //testCollisions 10000 100
-              //testCollisions 100000 100
-              //testCollisions 1000000 3000 
-        ]
+          <| fun _ -> testCollisions 100 10 ]
 
 
 let doBigTest (numEntries: int) =
@@ -1011,7 +976,6 @@ let doBigTest (numEntries: int) =
 
     let rnd = Random()
     let dict = Dictionary<int, int>(numEntries)
-
     for i = 0 to numEntries - 1 do
         let r = rnd.Next()
         dict.[r] <- r
@@ -1039,4 +1003,4 @@ let bigPersistentHashMapTests =
         "big insertions into PersistentHashMap"
         [
 
-          testCase "test for 100" <| fun _ -> doBigTest 100 ]
+        testCase "test for 100" <| fun _ -> doBigTest 100 ]

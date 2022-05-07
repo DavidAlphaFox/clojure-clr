@@ -42,10 +42,7 @@ type FakeSeq(n1) =
     let numItems = n1
 
     member x.next() =
-        if numItems = 0 then
-            null
-        else
-            FakeSeq(numItems - 1)
+        if numItems = 0 then null else FakeSeq(numItems - 1)
 
 
 
@@ -83,10 +80,7 @@ type BoundedLength() =
         let limit = x.count - 2
 
         let rec step (c: FakeSeq) i =
-            if c <> null && i <= limit then
-                step (c.next ()) (i + 1)
-            else
-                i
+            if c <> null && i <= limit then step (c.next ()) (i + 1) else i
 
         step (FakeSeq(x.count)) 0
 
@@ -95,9 +89,6 @@ type BoundedLength() =
         let limit = x.count + 10
 
         let rec step (c: FakeSeq) i =
-            if c <> null && i <= limit then
-                step (c.next ()) (i + 1)
-            else
-                i
+            if c <> null && i <= limit then step (c.next ()) (i + 1) else i
 
         step (FakeSeq(x.count)) 0

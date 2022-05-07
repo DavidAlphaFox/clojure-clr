@@ -28,7 +28,7 @@ module RTEnv =
 
 
     // Similarly, we need to provide a method for comparing numeric types for equality
-    let dummyNumericEquality (x: obj, y: obj) : bool = x.Equals(y)
+    let dummyNumericEquality (x: obj, y: obj): bool = x.Equals(y)
 
 
     let mutable internal numericEqualityFn: (obj * obj) -> bool = dummyNumericEquality
@@ -38,7 +38,7 @@ module RTEnv =
 
 
 
-    let baseHashNumber (o: obj) : int =
+    let baseHashNumber (o: obj): int =
         match o with
         | :? uint64 as n -> Murmur3.HashLongU n |> int
         | :? uint32 as n -> Murmur3.HashLongU(uint64 n) |> int
@@ -72,11 +72,11 @@ module RTEnv =
 
 
     let mutable internal metaPrinterFn: PrintFnType = dummyPrinter
-    let setMetaPrintFn (prfn: PrintFnType) : unit = metaPrinterFn <- prfn
+    let setMetaPrintFn (prfn: PrintFnType): unit = metaPrinterFn <- prfn
 
 
     let mutable internal printFn: PrintFnType = dummyPrinter
-    let setPrintFn (prfn: PrintFnType) : unit = printFn <- prfn
+    let setPrintFn (prfn: PrintFnType): unit = printFn <- prfn
 
 
     let mutable isInitialized: bool = false

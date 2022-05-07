@@ -26,10 +26,7 @@ module Util =
 
     let seqCount (s: ISeq) =
         let rec step (s: ISeq) cnt =
-            if isNull s then
-                cnt
-            else
-                step (s.next ()) (cnt + 1)
+            if isNull s then cnt else step (s.next ()) (cnt + 1)
 
         step s 0
 
@@ -38,10 +35,9 @@ module Util =
             31 * hc + if isNull x then 0 else x.GetHashCode()
 
         let rec step (s: ISeq) hc =
-            if isNull s then
-                hc
-            else
-                step (s.next ()) (combine hc (s.first ()))
+            if isNull s
+            then hc
+            else step (s.next ()) (combine hc (s.first ()))
 
         step s 1
 
@@ -58,29 +54,23 @@ module Util =
                 (itemToString (s.first ()))
                 + (itemsToString (s.next ()))
 
-        if isNull s then
-            "nil"
-        else
-            "(" + (itemsToString s) + ")"
+        if isNull s then "nil" else "(" + (itemsToString s) + ")"
 
 type SimpleCons(head: obj, tail: ISeq) =
     // I had to restrain myself from calling these car & cdr
 
     interface ISeq with
         member _.first() = head
-        member this.next() = (this :> ISeq).more().seq ()
+        member this.next() = (this :> ISeq).more().seq()
 
         member _.more() =
-            if isNull tail then
-                upcast SimpleEmptySeq()
-            else
-                tail
+            if isNull tail then upcast SimpleEmptySeq() else tail
 
         member this.cons(o) = upcast SimpleCons(o, this)
 
     interface IPersistentCollection with
         member _.count() = 1 + Util.seqCount tail
-        member this.cons(o) = upcast (this :> ISeq).cons (o)
+        member this.cons(o) = upcast (this :> ISeq).cons(o)
         member _.empty() = upcast SimpleEmptySeq()
 
         member this.equiv(o) =
@@ -102,7 +92,6 @@ type SimpleCons(head: obj, tail: ISeq) =
 
     static member makeConsSeq(n: int) =
         let mutable (c: ISeq) = upcast SimpleEmptySeq()
-
         for i = n - 1 downto 0 do
             c <- c.cons (i)
 
@@ -120,7 +109,7 @@ and SimpleEmptySeq() =
 
     interface IPersistentCollection with
         member _.count() = 0
-        member this.cons(o) = upcast (this :> ISeq).cons (o)
+        member this.cons(o) = upcast (this :> ISeq).cons(o)
         member this.empty() = upcast this
         member this.equiv(o) = this.Equals(o)
 
@@ -142,19 +131,16 @@ type SimpleRange(startVal: int, endVal: int) =
 
     interface ISeq with
         member _.first() = upcast startVal
-        member this.next() = (this :> ISeq).more().seq ()
+        member this.next() = (this :> ISeq).more().seq()
 
         member this.more() =
-            if startVal = endVal then
-                upcast SimpleEmptySeq()
-            else
-                upcast SimpleRange(startVal + 1, endVal)
+            if startVal = endVal then upcast SimpleEmptySeq() else upcast SimpleRange(startVal + 1, endVal)
 
         member this.cons(o) = SimpleCons(o, (this :> ISeq)) :> ISeq
 
     interface IPersistentCollection with
         member _.count() = endVal - startVal + 1
-        member this.cons(o) = upcast (this :> ISeq).cons (o)
+        member this.cons(o) = upcast (this :> ISeq).cons(o)
         member _.empty() = upcast SimpleEmptySeq()
 
         member this.equiv(o) =
@@ -187,7 +173,7 @@ type SimpleMap(keys: obj list, vals: obj list) =
 
     new() = SimpleMap(List.Empty, List.Empty)
 
-    static member mapCompare(m1: IPersistentMap, o: obj) : bool =
+    static member mapCompare(m1: IPersistentMap, o: obj): bool =
         if obj.ReferenceEquals(m1, o) then
             true
         else
@@ -202,10 +188,8 @@ type SimpleMap(keys: obj list, vals: obj list) =
                         else
                             let me: IMapEntry = downcast s.first ()
 
-                            if
-                                m2.containsKey (me.key ())
-                                && m2.valAt(me.key ()).Equals(me.value ())
-                            then
+                            if m2.containsKey (me.key ())
+                               && m2.valAt(me.key ()).Equals(me.value ()) then
                                 step (s.next ())
                             else
                                 false
@@ -215,10 +199,10 @@ type SimpleMap(keys: obj list, vals: obj list) =
 
 
     interface IPersistentCollection with
-        member this.count() = (this :> IPersistentMap).count ()
+        member this.count() = (this :> IPersistentMap).count()
 
         member this.cons(o) =
-            (this :> IPersistentMap).cons (o) :> IPersistentCollection
+            (this :> IPersistentMap).cons(o) :> IPersistentCollection
 
         member _.empty() = SimpleMap() :> IPersistentCollection
         member this.equiv(o) = SimpleMap.mapCompare (this, o)
@@ -241,19 +225,18 @@ type SimpleMap(keys: obj list, vals: obj list) =
         member _.containsKey(key) = List.contains key keys
 
         member this.entryAt(key) =
-            if (this :> Associative).containsKey key then
-                SimpleMapEntry(key, (this :> ILookup).valAt (key)) :> IMapEntry
-            else
-                null
+            if (this :> Associative).containsKey key
+            then SimpleMapEntry(key, (this :> ILookup).valAt(key)) :> IMapEntry
+            else null
 
         member this.assoc(k, v) =
-            upcast (this :> IPersistentMap).assoc (k, v)
+            upcast (this :> IPersistentMap).assoc(k, v)
 
     interface Counted with
         member _.count() = keys.Length
 
     interface IEnumerable<IMapEntry> with
-        member _.GetEnumerator() : IEnumerator<IMapEntry> =
+        member _.GetEnumerator(): IEnumerator<IMapEntry> =
             (seq {
                 for i = 0 to keys.Length - 1 do
                     yield SimpleMapEntry(keys.Item(i), vals.Item(i)) :> IMapEntry
@@ -261,22 +244,21 @@ type SimpleMap(keys: obj list, vals: obj list) =
                 .GetEnumerator()
 
     interface IEnumerable with
-        member this.GetEnumerator() : IEnumerator =
+        member this.GetEnumerator(): IEnumerator =
             upcast (this :> IEnumerable<IMapEntry>).GetEnumerator()
 
     interface IPersistentMap with
         member this.assoc(k, v) =
-            if (this :> Associative).containsKey k then
-                (this :> IPersistentMap).without(k).assoc (k, v) // not the most efficient way, but who cares?
-            else
-                SimpleMap(k :: keys, v :: vals) :> IPersistentMap
+            if (this :> Associative).containsKey k
+            then (this :> IPersistentMap).without(k).assoc(k, v) // not the most efficient way, but who cares?
+            else SimpleMap(k :: keys, v :: vals) :> IPersistentMap
 
         member this.assocEx(k, v) =
-            if (this :> Associative).containsKey (k) then
+            if (this :> Associative).containsKey(k) then
                 raise
                 <| InvalidOperationException("Key already present.")
             else
-                (this :> IPersistentMap).assoc (k, v)
+                (this :> IPersistentMap).assoc(k, v)
 
         member this.without(key) =
             match List.tryFindIndex (fun k -> k = key) keys with
@@ -290,7 +272,7 @@ type SimpleMap(keys: obj list, vals: obj list) =
             match o with
             | :? IMapEntry as me ->
                 (this :> IPersistentMap)
-                    .assoc (me.key (), me.value ())
+                    .assoc(me.key (), me.value ())
             | _ ->
                 raise
                 <| InvalidOperationException("Can only cons an IMapEntry to this map")
@@ -330,13 +312,12 @@ and SimpleMapSeq(keys: obj list, vals: obj list) =
             upcast SimpleMapEntry(keys.Head, vals.Head)
 
         member _.next() =
-            if keys.Length <= 1 then
-                null
-            else
-                upcast SimpleMapSeq(keys.Tail, vals.Tail)
+            if keys.Length <= 1
+            then null
+            else upcast SimpleMapSeq(keys.Tail, vals.Tail)
 
         member this.more() =
-            match (this :> ISeq).next () with
+            match (this :> ISeq).next() with
             | null -> upcast SimpleEmptySeq()
             | s -> s
 

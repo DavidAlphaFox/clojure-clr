@@ -185,16 +185,14 @@ let basicPersistentArrayMapPersistentCollectionTests =
               let m = PersistentArrayMap.create (d)
               let s = m.seq ()
               let me1 = s.first () :?> IMapEntry
-              let me2 = s.next().first () :?> IMapEntry
-              let last = s.next().next ()
+              let me2 = s.next().first() :?> IMapEntry
+              let last = s.next().next()
 
               Expect.equal (s.count ()) 2 "COunt of seq should be # of entries in map"
               Expect.equal (me1.value ()) (m.valAt (me1.key ())) "K/V pair should match map"
               Expect.equal (me2.value ()) (m.valAt (me2.key ())) "K/V pair should match map"
               Expect.notEqual (me1.key ()) (me2.key ()) "Should see different keys"
-              Expect.isNull last "end of seq should be null"
-
-          ]
+              Expect.isNull last "end of seq should be null" ]
 
 
 [<Tests>]
@@ -259,7 +257,6 @@ let basicPersistentArrayMapPersistentMapTests =
           testCase "without on existing key removes it"
           <| fun _ ->
               let d: Dictionary<int, string> = Dictionary()
-
               d.[3] <- "a"
               d.[5] <- "b"
               d.[7] <- "c"
@@ -275,7 +272,6 @@ let basicPersistentArrayMapPersistentMapTests =
           testCase "without on missing key returns original"
           <| fun _ ->
               let d: Dictionary<int, string> = Dictionary()
-
               d.[3] <- "a"
               d.[5] <- "b"
               d.[7] <- "c"
@@ -283,9 +279,7 @@ let basicPersistentArrayMapPersistentMapTests =
               let m1 = PersistentArrayMap.create (d)
               let m2 = m1.without (4)
 
-              Expect.isTrue (m1 = m2) "No change"
-
-          ]
+              Expect.isTrue (m1 = m2) "No change" ]
 
 [<Tests>]
 let aPersistentMapTests =
@@ -310,7 +304,6 @@ let aPersistentMapTests =
               d.[2] <- "b"
 
               let m = PersistentArrayMap.create (d)
-
               d.[2] <- "c"
 
               Expect.isFalse (m.equiv (d)) "Equal on different dictionary"
@@ -322,7 +315,6 @@ let aPersistentMapTests =
               d.[2] <- "b"
 
               let m = PersistentArrayMap.create (d)
-
               d.[3] <- "c"
 
               Expect.isFalse (m.equiv (d)) "Equal on different dictionary"
@@ -334,7 +326,6 @@ let aPersistentMapTests =
               d.[2] <- "b"
 
               let m1 = PersistentArrayMap.create (d)
-
               d.[2] <- "c"
 
 
@@ -658,8 +649,7 @@ let aPersistentMapTests =
 
               // Could be either order
               Expect.isTrue
-                  (match de1.key () :?> int32, de1.value () :?> string, de2.key () :?> int32, de2.value () :?> string
-                       with
+                  (match de1.key () :?> int32, de1.value () :?> string, de2.key () :?> int32, de2.value () :?> string with
                    | 1, "a", 2, "b"
                    | 2, "b", 1, "a" -> true
                    | _ -> false)
@@ -684,18 +674,14 @@ let aPersistentMapTests =
 
               // Could be either order
               Expect.isTrue
-                  (match a.[0].key () :?> int32,
-                         a.[0].value () :?> string,
-                         a.[1].key () :?> int32,
-                         a.[1].value () :?> string
-                       with
+                  (match a.[0].key() :?> int32,
+                         a.[0].value() :?> string,
+                         a.[1].key() :?> int32,
+                         a.[1].value() :?> string with
                    | 1, "a", 2, "b"
                    | 2, "b", 1, "a" -> true
                    | _ -> false)
-                  "matched key/val pairs"
-
-
-          ]
+                  "matched key/val pairs" ]
 
 [<Tests>]
 let persistentArrayMapIObjTests =
@@ -703,18 +689,16 @@ let persistentArrayMapIObjTests =
         "PersistentArrayMap IObj tests"
         [
 
-          testCase "Verify PersistentArrayMap.IObj"
-          <| fun _ ->
-              let d: Dictionary<int, string> = Dictionary()
-              d.[1] <- "a"
-              d.[2] <- "b"
+        testCase "Verify PersistentArrayMap.IObj"
+        <| fun _ ->
+            let d: Dictionary<int, string> = Dictionary()
+            d.[1] <- "a"
+            d.[2] <- "b"
 
-              let m = PersistentArrayMap.create (d) :?> IObj
-              let pm = m.withMeta (metaForSimpleTests)
+            let m = PersistentArrayMap.create (d) :?> IObj
+            let pm = m.withMeta (metaForSimpleTests)
 
-              verifyNullMeta m
-              verifyWithMetaHasCorrectMeta pm
-              verifyWithMetaNoChange m
-              verifyWithMetaReturnType m typeof<PersistentArrayMap>
-
-         ]
+            verifyNullMeta m
+            verifyWithMetaHasCorrectMeta pm
+            verifyWithMetaNoChange m
+            verifyWithMetaReturnType m typeof<PersistentArrayMap> ]

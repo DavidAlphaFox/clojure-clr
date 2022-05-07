@@ -21,7 +21,7 @@ type TypedSeqEnumerator<'T when 'T: not struct>(s: ISeq) =
 
             match curr with
             | None ->
-                let v = RT.first (next) :?> 'T in
+                let v = RT.first (next) :?> 'T
                 curr <- Some v
                 v
             | Some v -> v
@@ -83,8 +83,7 @@ type ASeq(m) =
 
     override this.ToString() =
         // complete and total hack until I get RTEnv intiailized figured out:  TODO: FIX THIS!
-        if not RTEnv.isInitialized then
-            RTEnvInitialization.initialize ()
+        if not RTEnv.isInitialized then RTEnvInitialization.initialize ()
 
         RT.printString (this)
 
@@ -118,7 +117,7 @@ type ASeq(m) =
 
         match hash with
         | None ->
-            let h = step ((this :> ISeq).seq ()) 1
+            let h = step ((this :> ISeq).seq()) 1
             hash <- Some h
             h
         | Some h -> h
@@ -148,24 +147,19 @@ type ASeq(m) =
             <| NotImplementedException("Subclasses of ASeq must implement ISeq.next()")
 
         member this.more() =
-            let s = (this :> ISeq).next ()
+            let s = (this :> ISeq).next()
 
-            if s = null then
-                EmptyList.Empty :> ISeq
-            else
-                s
+            if s = null then EmptyList.Empty :> ISeq else s
 
         member this.cons(o) = Cons(o, this) :> ISeq
 
     interface IPersistentCollection with
         member this.cons(o) =
-            (this :> ISeq).cons (o) :> IPersistentCollection
+            (this :> ISeq).cons(o) :> IPersistentCollection
 
-        member this.count() =
-            1 + ASeq.doCount ((this :> ISeq).next ())
+        member this.count() = 1 + ASeq.doCount ((this :> ISeq).next())
 
-        member _.empty() =
-            EmptyList.Empty :> IPersistentCollection
+        member _.empty() = EmptyList.Empty :> IPersistentCollection
 
         member this.equiv(o) =
             match o with
@@ -240,37 +234,30 @@ type ASeq(m) =
 
         member this.IndexOf(v) =
             let rec step i (s: ISeq) =
-                if isNull s then
-                    -1
-                else if Util.equiv (s.first (), v) then
-                    i
-                else
-                    step (i + 1) (s.next ())
+                if isNull s then -1
+                else if Util.equiv (s.first (), v) then i
+                else step (i + 1) (s.next ())
 
-            step 0 ((this :> ISeq).seq ())
+            step 0 ((this :> ISeq).seq())
 
         member this.Contains(v) =
             let rec step (s: ISeq) =
-                if isNull s then
-                    false
-                else if Util.equiv (s.first (), v) then
-                    true
-                else
-                    step (s.next ())
+                if isNull s then false
+                else if Util.equiv (s.first (), v) then true
+                else step (s.next ())
 
-            step ((this :> ISeq).seq ())
+            step ((this :> ISeq).seq())
 
     interface IEnumerable with
         member x.GetEnumerator() = new SeqEnumerator(x) :> IEnumerator
 
     interface ICollection with
-        member x.Count = (x :> IPersistentCollection).count ()
+        member x.Count = (x :> IPersistentCollection).count()
         member x.IsSynchronized = true
         member x.SyncRoot = upcast x
 
         member x.CopyTo(arr: Array, idx) =
-            if isNull arr then
-                raise <| ArgumentNullException("array")
+            if isNull arr then raise <| ArgumentNullException("array")
 
             if arr.Rank <> 1 then
                 raise
@@ -280,11 +267,10 @@ type ASeq(m) =
                 raise
                 <| ArgumentOutOfRangeException("arrayIndex", "must be non-negative")
 
-            if arr.Length - idx < (x :> IPersistentCollection).count () then
+            if arr.Length - idx < (x :> IPersistentCollection).count() then
                 raise
-                <| InvalidOperationException(
-                    "The number of elements in source is greater than the available space in the array."
-                )
+                <| InvalidOperationException
+                    ("The number of elements in source is greater than the available space in the array.")
 
             let rec step (i: int) (s: ISeq) =
                 if i < arr.Length && s <> null then
@@ -312,14 +298,11 @@ and [<Sealed>] Cons(meta, f: obj, m: ISeq) =
 
     interface IObj with
         member this.withMeta(m) =
-            if Object.ReferenceEquals(m, meta) then
-                (this :> IObj)
-            else
-                Cons(m, first, more) :> IObj
+            if Object.ReferenceEquals(m, meta) then (this :> IObj) else Cons(m, first, more) :> IObj
 
     interface ISeq with
         member _.first() = first
-        member this.next() = (this :> ISeq).more().seq ()
+        member this.next() = (this :> ISeq).more().seq()
 
         member _.more() =
             match more with
@@ -350,10 +333,9 @@ and [<Sealed>] EmptyList(m) =
 
     interface IObj with
         member this.withMeta(m) =
-            if Object.ReferenceEquals(m, (this :> IMeta).meta ()) then
-                this :> IObj
-            else
-                EmptyList(m) :> IObj
+            if Object.ReferenceEquals(m, (this :> IMeta).meta())
+            then this :> IObj
+            else EmptyList(m) :> IObj
 
     interface ISeq with
         member _.first() = null
@@ -361,13 +343,13 @@ and [<Sealed>] EmptyList(m) =
         member this.more() = this :> ISeq
 
         member this.cons(o) =
-            PersistentList((this :> IMeta).meta (), o, null, 1) :> ISeq
+            PersistentList((this :> IMeta).meta(), o, null, 1) :> ISeq
 
     interface IPersistentCollection with
         member _.count() = 0
 
         member this.cons(o) =
-            (this :> ISeq).cons (o) :> IPersistentCollection
+            (this :> ISeq).cons(o) :> IPersistentCollection
 
         member this.empty() = this :> IPersistentCollection
         member this.equiv(o) = this.Equals(o)
@@ -396,7 +378,7 @@ and [<Sealed>] EmptyList(m) =
         member this.SyncRoot = upcast this
 
     static member emptyEnumerator: IEnumerator =
-        Seq.empty<obj>.GetEnumerator () :> IEnumerator
+        Seq.empty<obj>.GetEnumerator() :> IEnumerator
 
     interface IEnumerable with
         member x.GetEnumerator() = EmptyList.emptyEnumerator
@@ -426,7 +408,8 @@ and [<Sealed>] EmptyList(m) =
         member _.IsReadOnly = true
 
         member _.Item
-            with get index = raise <| ArgumentOutOfRangeException("index")
+            with get index =
+                raise <| ArgumentOutOfRangeException("index")
             and set _ _ =
                 raise
                 <| InvalidOperationException("Cannot modify an immutable sequence")
@@ -446,7 +429,6 @@ and [<AllowNullLiteral>] PersistentList(m1, f1, r1, c1) =
 
     static member create(init: IList) =
         let mutable r = EmptyList.Empty :> IPersistentList
-
         for i = init.Count - 1 downto 0 do
             r <- downcast r.cons (init.[i])
 
@@ -454,25 +436,23 @@ and [<AllowNullLiteral>] PersistentList(m1, f1, r1, c1) =
 
     interface IObj with
         member this.withMeta(m) =
-            if Object.ReferenceEquals(m, (this :> IMeta).meta ()) then
-                this :> IObj
-            else
-                PersistentList(m, first, rest, count) :> IObj
+            if Object.ReferenceEquals(m, (this :> IMeta).meta())
+            then this :> IObj
+            else PersistentList(m, first, rest, count) :> IObj
 
     interface ISeq with
         member _.first() = first
         member _.next() = if count = 1 then null else rest.seq ()
 
         member this.cons(o) =
-            PersistentList((this :> IObj).meta (), o, (this :> IPersistentList), count + 1) :> ISeq
+            PersistentList((this :> IObj).meta(), o, (this :> IPersistentList), count + 1) :> ISeq
 
     interface IPersistentCollection with
         member _.count() = count
 
         member this.empty() =
             (EmptyList.Empty :> IObj)
-                .withMeta ((this :> IMeta).meta ())
-            :?> IPersistentCollection
+                .withMeta((this :> IMeta).meta()) :?> IPersistentCollection
 
     interface IPersistentStack with
         member _.peek() = first
@@ -481,8 +461,7 @@ and [<AllowNullLiteral>] PersistentList(m1, f1, r1, c1) =
             match rest with
             | null ->
                 (EmptyList.Empty :> IObj)
-                    .withMeta ((this :> IMeta).meta ())
-                :?> IPersistentStack
+                    .withMeta((this :> IMeta).meta()) :?> IPersistentStack
             | _ -> rest :> IPersistentStack
 
     interface IPersistentList
@@ -494,16 +473,16 @@ and [<AllowNullLiteral>] PersistentList(m1, f1, r1, c1) =
                 | null -> value
                 | _ ->
                     match value with
-                    | :? Reduced as r -> (r :> IDeref).deref ()
+                    | :? Reduced as r -> (r :> IDeref).deref()
                     | _ -> step (s.next ()) (fn.invoke (value, s.first ()))
 
             let init =
-                fn.invoke (start, (this :> ISeq).first ())
+                fn.invoke (start, (this :> ISeq).first())
 
-            let ret = step ((this :> ISeq).next ()) init
+            let ret = step ((this :> ISeq).next()) init
 
             match ret with
-            | :? Reduced as r -> (r :> IDeref).deref ()
+            | :? Reduced as r -> (r :> IDeref).deref()
             | _ -> ret
 
     interface IReduce with
@@ -515,17 +494,17 @@ and [<AllowNullLiteral>] PersistentList(m1, f1, r1, c1) =
                     let nextVal = (fn.invoke (value, s.first ()))
 
                     match nextVal with
-                    | :? Reduced as r -> (r :> IDeref).deref ()
+                    | :? Reduced as r -> (r :> IDeref).deref()
                     | _ -> step (s.next ()) nextVal
 
-            step ((this :> ISeq).next ()) ((this :> ISeq).first ())
+            step ((this :> ISeq).next()) ((this :> ISeq).first())
 
 // We had to defer this definition until now because we needed PersistentList and Cons
 // Eventually we will have to consolidate via an export module.
 
 module RT2 =
 
-    let cons (x: obj, coll: obj) : ISeq =
+    let cons (x: obj, coll: obj): ISeq =
         match coll with
         | null -> upcast PersistentList(x)
         | :? ISeq as s -> upcast Cons(x, s)
@@ -546,13 +525,13 @@ type LazySeq(m1, fn1, s1) =
     new(m1: IPersistentMap, s1: ISeq) = LazySeq(m1, null, s1)
 
     override this.GetHashCode() =
-        match (this :> ISeq).seq () with
+        match (this :> ISeq).seq() with
         | null -> 1
         | s -> Util.hash s
 
 
     override this.Equals(o: obj) =
-        match (this :> ISeq).seq (), o with
+        match (this :> ISeq).seq(), o with
         | null, :? Sequential
         | null, :? IList -> RT.seq (o) = null
         | null, _ -> false
@@ -560,12 +539,11 @@ type LazySeq(m1, fn1, s1) =
 
     interface IObj with
         member this.withMeta(meta: IPersistentMap) =
-            if Object.ReferenceEquals((this :> IMeta).meta (), meta) then
-                this :> IObj
-            else
-                LazySeq(meta, (this :> ISeq).seq ()) :> IObj
+            if Object.ReferenceEquals((this :> IMeta).meta(), meta)
+            then this :> IObj
+            else LazySeq(meta, (this :> ISeq).seq()) :> IObj
 
-    member _.sval() : obj =
+    member _.sval(): obj =
         if not (isNull fn) then
             sv <- fn.invoke ()
             fn <- null
@@ -596,18 +574,18 @@ type LazySeq(m1, fn1, s1) =
 
     interface IPersistentCollection with
         member _.count() =
-            let rec countAux (s: ISeq) (acc: int) : int =
+            let rec countAux (s: ISeq) (acc: int): int =
                 match s with
                 | null -> acc
                 | _ -> countAux (s.next ()) (acc + 1)
 
             countAux s 0
 
-        member this.cons(o) = upcast (this :> ISeq).cons (o)
+        member this.cons(o) = upcast (this :> ISeq).cons(o)
         member _.empty() = upcast PersistentList.Empty
 
         member this.equiv(o) =
-            match (this :> ISeq).seq () with
+            match (this :> ISeq).seq() with
             | null ->
                 match o with
                 | :? IList
@@ -617,22 +595,19 @@ type LazySeq(m1, fn1, s1) =
 
     interface ISeq with
         member this.first() =
-            (this :> ISeq).seq () |> ignore
+            (this :> ISeq).seq() |> ignore
             if isNull s then null else s.first ()
 
         member this.next() =
-            (this :> ISeq).seq () |> ignore
+            (this :> ISeq).seq() |> ignore
             if isNull s then null else s.next ()
 
         member this.more() =
-            (this :> ISeq).seq () |> ignore
+            (this :> ISeq).seq() |> ignore
 
-            if isNull s then
-                upcast PersistentList.Empty
-            else
-                s.more ()
+            if isNull s then upcast PersistentList.Empty else s.more ()
 
-        member this.cons(o: obj) : ISeq = RT2.cons (o, (this :> ISeq).seq ())
+        member this.cons(o: obj): ISeq = RT2.cons (o, (this :> ISeq).seq())
 
     interface IPending with
         member _.isRealized() = isNull fn
@@ -689,34 +664,27 @@ type LazySeq(m1, fn1, s1) =
 
         member this.IndexOf(v) =
             let rec step i (s: ISeq) =
-                if isNull s then
-                    -1
-                else if Util.equiv (s.first (), v) then
-                    i
-                else
-                    step (i + 1) (s.next ())
+                if isNull s then -1
+                else if Util.equiv (s.first (), v) then i
+                else step (i + 1) (s.next ())
 
-            step 0 ((this :> ISeq).seq ())
+            step 0 ((this :> ISeq).seq())
 
         member this.Contains(v) =
             let rec step (s: ISeq) =
-                if isNull s then
-                    false
-                else if Util.equiv (s.first (), v) then
-                    true
-                else
-                    step (s.next ())
+                if isNull s then false
+                else if Util.equiv (s.first (), v) then true
+                else step (s.next ())
 
-            step ((this :> ISeq).seq ())
+            step ((this :> ISeq).seq())
 
     interface ICollection with
-        member this.Count = (this :> IPersistentCollection).count ()
+        member this.Count = (this :> IPersistentCollection).count()
         member _.IsSynchronized = true
         member this.SyncRoot = upcast this
 
         member this.CopyTo(arr: Array, idx) =
-            if isNull arr then
-                raise <| ArgumentNullException("array")
+            if isNull arr then raise <| ArgumentNullException("array")
 
             if idx < 0 then
                 raise
@@ -730,7 +698,7 @@ type LazySeq(m1, fn1, s1) =
                 raise
                 <| ArgumentException("index", "must be less than the length")
 
-            if (this :> IPersistentCollection).count () > arr.Length - idx then
+            if (this :> IPersistentCollection).count() > arr.Length - idx then
                 raise
                 <| InvalidOperationException("Not enough available space from index to end of the array.")
 

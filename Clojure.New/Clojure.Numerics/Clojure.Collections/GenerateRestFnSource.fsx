@@ -5,10 +5,7 @@ let filename = ".\\test.out"
 let tw = new StreamWriter(filename)
 
 let writePreamble () =
-    fprintf
-        tw
-        "%s"
-        """namespace Clojure.Fn
+    fprintf tw "%s" """namespace Clojure.Fn
 
 open System
 open Clojure.Collections
@@ -45,15 +42,13 @@ let writeDoInvokes (max: int) =
         startingParams
         + (if n = 0 then "" else ", ")
         + "args:obj "
-
     for i = 0 to max do
         fprintfn tw "    abstract _.doInvoke : %s" (fnType i)
         fprintfn tw "    default _.doInvoke(%s) : obj = null" (argList i)
 
 
 let writeApplyTo (max: int) =
-    let preamble =
-        """
+    let preamble = """
     overide x.applyTo (argList:ISeq) : obj =
         let reqArity = x.getRequiredArity()
         if AFn.boundedLength(argList,reqArity) <= reqArity
@@ -68,10 +63,7 @@ let writeApplyTo (max: int) =
             sprintf "            | %i -> x.doInvoke( " index
 
         let optionalFirstArg =
-            if index = 0 then
-                ""
-            else
-                "arglist.first(), "
+            if index = 0 then "" else "arglist.first(), "
 
         let body =
             if index < 2 then
@@ -83,10 +75,7 @@ let writeApplyTo (max: int) =
         let optComma = if index < 2 then "" else ", "
 
         let tail =
-            if index = 0 then
-                "al )"
-            else
-                "al.next() )"
+            if index = 0 then "al )" else "al.next() )"
 
         head + optionalFirstArg + body + optComma + tail
 
@@ -94,7 +83,6 @@ let writeApplyTo (max: int) =
         "            |> _ -> raise <| WrongArityException(-1)"
 
     fprintfn tw "%s" preamble
-
     for i = 0 to max do
         fprintfn tw "%s" (generateCase i)
 
@@ -125,15 +113,11 @@ let writeInvoke (i: int) =
 
                 sprintf "ArraySeq.create(%s)" args
 
-        if m = 0 then
-            finalArg
-        else
-            initialArgs + ", " + finalArg
+        if m = 0 then finalArg else initialArgs + ", " + finalArg
 
 
     fprintfn tw "    override x.invoke(%s) = " (formalArgs i)
     fprintfn tw "        match x.getRequiredArity() with"
-
     for j = 0 to i do
         fprintfn tw "        | %i -> doInvoke(%s)" j (matchCallArgs j i)
 
@@ -184,7 +168,6 @@ let writeFinalInvoke (max: int) =
 
     fprintfn tw "    override x.invoke(%s) : obj =" (argList max)
     fprintfn tw "        match x.getRequiredArity() with"
-
     for i = 0 to max do
         fprintfn tw "        | %i -> %s" i (matchCall i max)
 

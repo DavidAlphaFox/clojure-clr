@@ -37,13 +37,13 @@ let verifyISeqRestTypes (s: ISeq) (t: Type) =
     step s
 
 let verifyIseqRestMaintainsMeta (s: ISeq) =
-    let m = (s :?> IMeta).meta ()
+    let m = (s :?> IMeta).meta()
 
     let rec step (s: ISeq) =
         match s.next () with
         | null -> ()
         | _ ->
-            Expect.isTrue (Object.ReferenceEquals((s.next () :?> IMeta).meta (), m)) "Next should have same meta"
+            Expect.isTrue (Object.ReferenceEquals((s.next () :?> IMeta).meta(), m)) "Next should have same meta"
             step (s.next ())
 
     step s
