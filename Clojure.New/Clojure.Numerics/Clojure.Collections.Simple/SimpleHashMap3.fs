@@ -317,7 +317,7 @@ type SimpleHashMap3 =
 
         ret.persistent ()
 
-and private TransientSimpleHashMap3(e, r, c) =
+and [<Sealed>] private TransientSimpleHashMap3(e, r, c) =
     inherit ATransientMap()
 
     [<NonSerialized>]
@@ -340,10 +340,10 @@ and private TransientSimpleHashMap3(e, r, c) =
         leafFlag.reset ()
 
         match root with
-        | None -> root <- Some((BitmapNode3.Empty :> INode3).assocTransient edit 0 (hash (k)) k v leafFlag)
+        | None -> root <- Some((BitmapNode3.Empty :> INode3).assocTransient edit 0 (hash k) k v leafFlag)
         | Some currNode ->
             let newNode =
-                currNode.assocTransient edit 0 (hash (k)) k v leafFlag
+                currNode.assocTransient edit 0 (hash k) k v leafFlag
 
             if newNode <> currNode then root <- Some newNode
 
@@ -398,17 +398,16 @@ and [<Sealed>] ArrayNode3(e, c, a) =
     member this.ensureEditable(e) =
         if edit = e
         then this
-        else ArrayNode3(e, count, nodes.Clone() :?> INode3 option [])
+        else ArrayNode3(e, count, downcast nodes.Clone() )
 
     member this.editAndSet(e, i, n) =
         let editable = this.ensureEditable (e)
         nodes.[i] <- n
         editable
 
-    member this.incrementCount() = count <- count + 1
-    member this.decrementCount() = count <- count - 1
+    member _.incrementCount() = count <- count + 1
+    member _.decrementCount() = count <- count - 1
 
-    // TODO: do this with sequence functions?
     static member pack (edit: AtomicReference<Thread>) (count: int) (nodes: INode3 option []) (idx: int): INode3 =
         let newArray: BNodeEntry3 [] = count - 1 |> Array.zeroCreate
         let mutable j = 0
@@ -616,7 +615,7 @@ and [<Sealed>] internal BitmapNode3(e, b, a) =
                                          | Node(Node = node) -> node |> Some
                                          | EmptyEntry ->
                                              InvalidOperationException
-                                                 ("Found Empty cell in BitmapNode2 -- algorithm bug")
+                                                 ("Found Empty cell in BitmapNode3 -- algorithm bug")
                                              |> raise
 
                             j <- j + 1
@@ -657,7 +656,7 @@ and [<Sealed>] internal BitmapNode3(e, b, a) =
                     then this
                     else BitmapNode3(null, bitmap, cloneAndSet (entries, idx, Node(newNode)))
                 | EmptyEntry ->
-                    InvalidOperationException("Found Empty cell in BitmapNode2 -- algorithm bug")
+                    InvalidOperationException("Found Empty cell in BitmapNode3 -- algorithm bug")
                     |> raise
 
 
@@ -712,7 +711,7 @@ and [<Sealed>] internal BitmapNode3(e, b, a) =
                 | KeyValue (Key = k; Value = v) -> if equiv (key, k) then v else notFound
                 | Node(Node = node) -> node.find2 (shift + 5) hash key notFound
                 | EmptyEntry ->
-                    InvalidOperationException("Found Empty cell in BitmapNode2 -- algorithm bug")
+                    InvalidOperationException("Found Empty cell in BitmapNode3 -- algorithm bug")
                     |> raise
 
         member this.getNodeSeq() = BitmapNode3Seq.create (entries, 0)
